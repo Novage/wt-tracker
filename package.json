@@ -1,0 +1,43 @@
+{
+  "name": "wt-tracker",
+  "description": "High performance WebTorrent tracker",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "author": "Novage",
+  "homepage": "https://github.com/Novage/wt-tracker",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "wt-tracker": "./dist/run-uws-tracker.js"
+  },
+  "keywords": [
+    "p2p",
+    "peer-to-peer",
+    "webrtc",
+    "torrent",
+    "bittorrent",
+    "bittorrent-tracker",
+    "webtorrent",
+    "tracker",
+    "websockets"
+  ],
+  "scripts": {
+    "start": "node ./dist/run-uws-tracker.js",
+    "compile": "tsc",
+    "watch": "tsc --watch",
+    "build": "npm run compile",
+    "lint": "tslint -c ./tslint.json -p ./tsconfig.tslint.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Novage/wt-tracker.git"
+  },
+  "dependencies": {
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^11.9.4",
+    "tslint": "^5.12.1",
+    "typescript": "^3.3.3"
+  }
+}

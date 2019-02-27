@@ -1,0 +1,23 @@
+{
+  "server": {
+    "port": 8433,
+    "key_file_name": "misc/key.pem",
+    "cert_file_name": "misc/cert.pem",
+    "passphrase": "1234",
+    "dh_params_file_name": "misc/params.dh"
+  },
+
+  "websockets": {
+    "path": "/",
+    "maxPayloadLength": 65536,
+    "idleTimeout": 240,
+    "compression": 1,
+    "logLevel": 0
+  },
+
+  "tracker": {
+    "maxOffers": 20,
+    "announceInterval": 120,
+    "logLevel": 0
+  }
+}
