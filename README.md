@@ -1,5 +1,5 @@
 # wt-tracker
-High performance WebTorrent tracker
+High-performance WebTorrent tracker
 ## Build instructions
 
 ```sh
