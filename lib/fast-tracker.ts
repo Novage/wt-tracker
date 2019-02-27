@@ -52,6 +52,8 @@ export class FastTracker implements Tracker {
             } else {
                 throw new TrackerError("unknown announce event");
             }
+        } else if (action === "scrape") {
+            this.processScrape(json, peer);
         } else {
             new TrackerError("unknown action");
         }
@@ -241,6 +243,58 @@ export class FastTracker implements Tracker {
 
         peer.id = undefined;
         (peer as InternalPeerContext).swarms = undefined;
+    }
+
+    private processScrape(json: any, peer: PeerContext) {
+        const infoHash: any = json.info_hash;
+        const files: {[key: string]: { complete: number, incomplete: number, downloaded: number}} = {};
+
+        if (infoHash === undefined) {
+            for (const swarm of this.swarms.values()) {
+                files[swarm.infoHash] = {
+                    complete: swarm.completedCount,
+                    incomplete: swarm.peersOrdered.length - swarm.completedCount,
+                    downloaded: swarm.completedCount
+                };
+            }
+        } else if (infoHash instanceof Array) {
+            for (const singleInfoHash of infoHash) {
+                const swarm = this.swarms.get(singleInfoHash);
+                if (swarm !== undefined) {
+                    files[singleInfoHash] = {
+                        complete: swarm.completedCount,
+                        incomplete: swarm.peersOrdered.length - swarm.completedCount,
+                        downloaded: swarm.completedCount
+                    };
+                } else if (typeof singleInfoHash === "string") {
+                    files[singleInfoHash] = {
+                        complete: 0,
+                        incomplete: 0,
+                        downloaded: 0
+                    };
+                }
+            }
+        } else {
+            const swarm = this.swarms.get(infoHash);
+            if (swarm !== undefined) {
+                files[infoHash] = {
+                    complete: swarm.completedCount,
+                    incomplete: swarm.peersOrdered.length - swarm.completedCount,
+                    downloaded: swarm.completedCount
+                };
+            } else if (typeof infoHash === "string") {
+                files[infoHash] = {
+                    complete: 0,
+                    incomplete: 0,
+                    downloaded: 0
+                };
+            }
+        }
+
+        peer.sendMessage({
+            action: "scrape",
+            files: files
+        });
     }
 
     public get stats() {

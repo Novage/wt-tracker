@@ -92,7 +92,7 @@ export class UWebSocketsTracker {
                     peer = {
                         sendMessage: (json: any) => {
                             ws.send(JSON.stringify(json), false, false);
-                            if (this.logLevel === 2) console.log("out", Buffer.from(peer!.id!).toString("hex"), json);
+                            if (this.logLevel === 2) console.log("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json);
                         }
                     };
                     (ws as any).peer = peer;
