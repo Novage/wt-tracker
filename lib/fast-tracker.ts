@@ -20,7 +20,7 @@ export class FastTracker implements Tracker {
     private swarms = new Map<string, Swarm>();
     private logLevel: number;
 
-    constructor(readonly settings: any) {
+    constructor(readonly settings: any = {}) {
         this.settings = {
             maxOffers: 20,
             logLevel: 0,

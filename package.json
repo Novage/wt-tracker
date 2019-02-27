@@ -23,10 +23,17 @@
   ],
   "scripts": {
     "start": "node ./dist/run-uws-tracker.js",
+    "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
+    "lint": "tslint -c ./tslint.json -p ./tsconfig.tslint.json",
+    "clean": "rimraf dist",
     "watch": "tsc --watch",
-    "build": "npm run compile",
-    "lint": "tslint -c ./tslint.json -p ./tsconfig.tslint.json"
+
+    "test": "npm run test:clean && npm run test:compile && npm run test:run",
+    "test:run": "nyc mocha test_dist/**/*.test.js",
+    "test:compile": "tsc --project tsconfig.test.json",
+    "test:clean": "rimraf test_dist",
+    "test:coverage": "nyc report --reporter=lcov --reporter=text"
   },
   "repository": {
     "type": "git",
@@ -36,7 +43,13 @@
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.1.0"
   },
   "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.6",
     "@types/node": "^11.9.4",
+    "chai": "^4.2.0",
+    "mocha": "^6.0.2",
+    "nyc": "^13.3.0",
+    "rimraf": "^2.6.3",
     "tslint": "^5.12.1",
     "typescript": "^3.3.3"
   }
