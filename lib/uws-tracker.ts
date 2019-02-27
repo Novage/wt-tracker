@@ -84,7 +84,7 @@ export class UWebSocketsTracker {
                     return;
                 }
 
-                let peer: PeerContext | undefined = (ws as any).peer;
+                let peer: PeerContext | undefined = ws.peer;
 
                 if (this.logLevel === 2) console.log("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
 
@@ -95,7 +95,7 @@ export class UWebSocketsTracker {
                             if (this.logLevel === 2) console.log("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json);
                         }
                     };
-                    (ws as any).peer = peer;
+                    ws.peer = peer;
                 }
 
                 try {
@@ -115,10 +115,10 @@ export class UWebSocketsTracker {
             },
             close: (ws: any, code: number, message: ArrayBuffer) => {
                 this.webSocketsCount--;
-                const peer: PeerContext | undefined = (ws as any).peer;
+                const peer: PeerContext | undefined = ws.peer;
 
                 if (peer !== undefined) {
-                    delete (ws as any).peer;
+                    delete ws.peer;
                     this.tracker.disconnectPeer(peer);
                 }
 

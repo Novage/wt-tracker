@@ -18,7 +18,7 @@ import { UWebSocketsTracker } from "./uws-tracker";
 import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
 
-let settingsFileData = undefined;
+let settingsFileData;
 
 if (process.argv[2]) {
     settingsFileData = readFileSync(process.argv[2]);

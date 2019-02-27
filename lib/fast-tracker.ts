@@ -55,7 +55,7 @@ export class FastTracker implements Tracker {
         } else if (action === "scrape") {
             this.processScrape(json, peer);
         } else {
-            new TrackerError("unknown action");
+            throw new TrackerError("unknown action");
         }
     }
 
@@ -63,7 +63,7 @@ export class FastTracker implements Tracker {
         const infoHash: string = json.info_hash;
         const peerId: string = json.peer_id;
 
-        let swarmContext: SwarmContext | undefined = undefined;
+        let swarmContext: SwarmContext | undefined;
 
         if (peer.id === undefined) {
             if (typeof peerId !== "string") {
@@ -120,7 +120,7 @@ export class FastTracker implements Tracker {
             incomplete: swarm.peers.size - swarm.completedCount
         });
 
-        const offers: Array<any> | undefined = json.offers;
+        const offers: any[] | undefined = json.offers;
         if (offers == undefined) {
             return;
         } else if (!(offers instanceof Array)) {
