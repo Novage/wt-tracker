@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/Novage/wt-tracker.svg?branch=master)](https://travis-ci.org/Novage/wt-tracker)
 # wt-tracker
 High-performance WebTorrent tracker
 
