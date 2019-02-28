@@ -11,6 +11,8 @@ High-performance WebTorrent tracker
 
 ## Build instructions
 
+Node.js 10.x or 11.x is required.
+
 ```sh
 npm install
 npm run build
