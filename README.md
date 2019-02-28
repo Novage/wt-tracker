@@ -25,7 +25,7 @@ node dist/run-uws-tracker.js [config.json]
 or
 
 ```sh
-node start [config.json]
+npm start [config.json]
 ```
 
 ## Configuration
