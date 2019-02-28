@@ -73,7 +73,7 @@ export class UWebSocketsTracker {
                 if (this.logLevel === 1) console.info("ws connected via URL", request.getUrl());
             },
             message: (ws: any, message: ArrayBuffer, isBinary: boolean) => {
-                if (this.logLevel === 2) console.info("ws message of size", message.byteLength);
+                if (this.logLevel === 1) console.info("ws message of size", message.byteLength);
 
                 let json;
                 try {
