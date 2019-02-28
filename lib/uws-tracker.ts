@@ -127,13 +127,23 @@ export class UWebSocketsTracker {
         });
     }
 
-    public run() {
+    public async run() {
+        let resolve: () => void;
+        let reject: (error: any) => void;
+
+        const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+            resolve = resolvePromise;
+            reject = rejectPromise;
+        });
+
         this.app_.listen(this.settings.server.port, (token: any) => {
             if (token) {
-                console.info("listening to port", this.settings.server.port);
+                resolve();
             } else {
-                console.error("failed to listen to port", this.settings.server.port);
+                reject(new Error(`failed to listen to port ${this.settings.server.port}`));
             }
         });
+
+        return promise;
     }
 }

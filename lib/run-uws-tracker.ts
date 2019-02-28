@@ -18,43 +18,62 @@ import { UWebSocketsTracker } from "./uws-tracker";
 import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
 
-let settingsFileData;
+async function main() {
+    let settingsFileData;
 
-if (process.argv[2]) {
-    settingsFileData = readFileSync(process.argv[2]);
-} else {
-    try {
-        settingsFileData = readFileSync("config.json");
-    } catch (e) {
-        if (e.code !== "ENOENT") {
-            throw e;
+    if (process.argv[2]) {
+        try {
+            settingsFileData = readFileSync(process.argv[2]);
+        } catch (e) {
+            console.error("failed to read configuration file:", e.toString());
+            return;
         }
+    } else {
+        try {
+            settingsFileData = readFileSync("config.json");
+        } catch (e) {
+            if (e.code !== "ENOENT") {
+                console.error("failed to read configuration file:", e.toString());
+                return;
+            }
+        }
+    }
+
+    let settings;
+    try {
+        settings = (settingsFileData !== undefined) ? JSON.parse(settingsFileData.toString()) : {};
+    } catch (e) {
+        console.error("failed to parse JSON configuration file:", e.toString());
+        return;
+    }
+
+    const tracker = new FastTracker(settings.tracker);
+
+    try {
+        const server = new UWebSocketsTracker(tracker, settings);
+
+        server.app
+        .get("/stats.json", (response: any, request: any) => {
+            response.writeHeader("Content-Type", "application/json")
+            .end(JSON.stringify({
+                ...tracker.stats,
+                ...server.stats
+            }));
+        })
+        .get("/*", (response: any, request: any) => {
+            const status = "404 Not Found";
+            response.writeStatus(status).end(status);
+        });
+
+        await server.run();
+        console.info("listening to port", server.settings.server.port);
+    } catch (e) {
+        console.error("failed to start Web server:", e.toString());
     }
 }
 
-const settings = (settingsFileData !== undefined)
-    ? JSON.parse(settingsFileData.toString("utf8"))
-    : {};
-
-const tracker = new FastTracker(settings.tracker);
-
 try {
-    const server = new UWebSocketsTracker(tracker, settings);
-
-    server.app
-    .get("/stats.json", (response: any, request: any) => {
-        response.writeHeader("Content-Type", "application/json")
-        .end(JSON.stringify({
-            ...tracker.stats,
-            ...server.stats
-        }));
-    })
-    .get("/*", (response: any, request: any) => {
-        const status = "404 Not Found";
-        response.writeStatus(status).end(status);
-    });
-
-    server.run();
+    main();
 } catch (e) {
-    console.error("failed to start Web server: ", e);
+    console.error(e);
 }
