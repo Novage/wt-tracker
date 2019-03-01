@@ -17,6 +17,7 @@
 import { UWebSocketsTracker } from "./uws-tracker";
 import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
+import { HttpResponse, HttpRequest } from "uWebSockets.js";
 
 async function main() {
     let settingsFileData;
@@ -53,14 +54,14 @@ async function main() {
         const server = new UWebSocketsTracker(tracker, settings);
 
         server.app
-        .get("/stats.json", (response: any, request: any) => {
+        .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
             response.writeHeader("Content-Type", "application/json")
             .end(JSON.stringify({
                 ...tracker.stats,
                 ...server.stats
             }));
         })
-        .get("/*", (response: any, request: any) => {
+        .get("/*", (response: HttpResponse, request: HttpRequest) => {
             const status = "404 Not Found";
             response.writeStatus(status).end(status);
         });

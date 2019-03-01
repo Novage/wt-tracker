@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import * as uWebSockets from "uWebSockets.js";
+import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
 import { Tracker, PeerContext, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
 
 // TODO: configure host once segmentation fault fixed in next to 15.1.0 release
 
 export class UWebSocketsTracker {
-    private app_: any;
+    private app_: TemplatedApp;
     private logLevel: number;
     private webSocketsCount: number = 0;
 
@@ -54,8 +54,8 @@ export class UWebSocketsTracker {
         this.logLevel = this.settings.websockets.logLevel;
 
         this.app_ = this.settings.server.key_file_name === undefined
-                ? uWebSockets.App(this.settings.server)
-                : uWebSockets.SSLApp(this.settings.server);
+                ? App(this.settings.server)
+                : SSLApp(this.settings.server);
 
         this.buildApplication();
     }
@@ -68,11 +68,11 @@ export class UWebSocketsTracker {
             compression: this.settings.websockets.compression,
             maxPayloadLength: this.settings.websockets.maxPayloadLength,
             idleTimeout: this.settings.websockets.idleTimeout,
-            open: (ws: any, request: any) => {
+            open: (ws: WebSocket, request: HttpRequest) => {
                 this.webSocketsCount++;
                 if (this.logLevel === 1) console.info("ws connected via URL", request.getUrl());
             },
-            message: (ws: any, message: ArrayBuffer, isBinary: boolean) => {
+            message: (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {
                 if (this.logLevel === 1) console.info("ws message of size", message.byteLength);
 
                 let json;
@@ -84,7 +84,7 @@ export class UWebSocketsTracker {
                     return;
                 }
 
-                let peer: PeerContext | undefined = ws.peer;
+                let peer: PeerContext | undefined = (ws as any).peer;
 
                 if (this.logLevel === 2) console.log("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
 
@@ -95,7 +95,7 @@ export class UWebSocketsTracker {
                             if (this.logLevel === 2) console.log("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json);
                         }
                     };
-                    ws.peer = peer;
+                    (ws as any).peer = peer;
                 }
 
                 try {
@@ -110,15 +110,15 @@ export class UWebSocketsTracker {
                     return;
                 }
             },
-            drain: (ws: any) => {
+            drain: (ws: WebSocket) => {
                 if (this.logLevel === 1) console.info("ws backpressure", ws.getBufferedAmount());
             },
-            close: (ws: any, code: number, message: ArrayBuffer) => {
+            close: (ws: WebSocket, code: number, message: ArrayBuffer) => {
                 this.webSocketsCount--;
-                const peer: PeerContext | undefined = ws.peer;
+                const peer: PeerContext | undefined = (ws as any).peer;
 
                 if (peer !== undefined) {
-                    delete ws.peer;
+                    delete (ws as any).peer;
                     this.tracker.disconnectPeer(peer);
                 }
 

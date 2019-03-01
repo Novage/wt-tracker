@@ -28,7 +28,6 @@
     "lint": "tslint -c ./tslint.json -p ./tsconfig.tslint.json",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
-
     "test": "npm run test:clean && npm run test:compile && npm run test:run",
     "test:run": "nyc mocha test_dist/**/*.test.js",
     "test:compile": "tsc --project tsconfig.test.json",
@@ -41,18 +40,18 @@
     "url": "https://github.com/Novage/wt-tracker.git"
   },
   "dependencies": {
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.1.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.3.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.6",
-    "@types/node": "^11.9.4",
+    "@types/node": "^11.9.6",
     "chai": "^4.2.0",
     "coveralls": "^3.0.3",
     "mocha": "^6.0.2",
     "nyc": "^13.3.0",
     "rimraf": "^2.6.3",
-    "tslint": "^5.12.1",
-    "typescript": "^3.3.3"
+    "tslint": "^5.13.1",
+    "typescript": "^3.3.3333"
   }
 }
