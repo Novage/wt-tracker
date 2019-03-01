@@ -40,7 +40,7 @@
     "url": "https://github.com/Novage/wt-tracker.git"
   },
   "dependencies": {
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.3.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.4.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
