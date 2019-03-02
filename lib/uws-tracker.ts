@@ -18,8 +18,6 @@ import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.j
 import { Tracker, PeerContext, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
 
-// TODO: configure host once segmentation fault fixed in next to 15.1.0 release
-
 export class UWebSocketsTracker {
     private app_: TemplatedApp;
     private logLevel: number;
@@ -39,6 +37,7 @@ export class UWebSocketsTracker {
         this.settings = {
             server: {
                 port: 8000,
+                host: "0.0.0.0",
                 ...((settings && settings.server) ? settings.server : {})
             },
             websockets: {
@@ -136,11 +135,11 @@ export class UWebSocketsTracker {
             reject = rejectPromise;
         });
 
-        this.app_.listen(this.settings.server.port, (token: any) => {
+        this.app_.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
             if (token) {
                 resolve();
             } else {
-                reject(new Error(`failed to listen to port ${this.settings.server.port}`));
+                reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
             }
         });
 
