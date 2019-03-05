@@ -26,16 +26,16 @@ const ldebugMessages = ldebug(Debug("wt-tracker:uws-tracker-messages"));
 const decoder = new StringDecoder();
 
 export class UWebSocketsTracker {
-    private app_: TemplatedApp;
+    private _app: TemplatedApp;
     private webSocketsCount: number = 0;
 
     get app() {
-        return this.app_;
+        return this._app;
     }
 
     get stats() {
         return {
-            webSocketsCount: this.webSocketsCount
+            webSocketsCount: this.webSocketsCount,
         };
     }
 
@@ -44,26 +44,46 @@ export class UWebSocketsTracker {
             server: {
                 port: 8000,
                 host: "0.0.0.0",
-                ...((settings && settings.server) ? settings.server : {})
+                ...((settings && settings.server) ? settings.server : {}),
             },
             websockets: {
                 path: "/",
                 maxPayloadLength: 64 * 1024,
                 idleTimeout: 240,
                 compression: 1,
-                ...((settings && settings.websockets) ? settings.websockets : {})
-            }
+                ...((settings && settings.websockets) ? settings.websockets : {}),
+            },
         };
 
-        this.app_ = this.settings.server.key_file_name === undefined
+        this._app = this.settings.server.key_file_name === undefined
                 ? App(this.settings.server)
                 : SSLApp(this.settings.server);
 
         this.buildApplication();
     }
 
+    public async run() {
+        let resolve: () => void;
+        let reject: (error: any) => void;
+
+        const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+            resolve = resolvePromise;
+            reject = rejectPromise;
+        });
+
+        this._app.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
+            if (token) {
+                resolve();
+            } else {
+                reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
+            }
+        });
+
+        return promise;
+    }
+
     private buildApplication() {
-        this.app_
+        this._app
         .ws(this.settings.websockets.path, {
             compression: this.settings.websockets.compression,
             maxPayloadLength: this.settings.websockets.maxPayloadLength,
@@ -76,7 +96,7 @@ export class UWebSocketsTracker {
                 debugWebSockets("drain", ws.getBufferedAmount());
             },
             message: this.onMessage,
-            close: this.onClose
+            close: this.onClose,
         });
     }
 
@@ -94,16 +114,14 @@ export class UWebSocketsTracker {
 
         let peer: PeerContext | undefined = (ws as any).peer;
 
-        ldebugMessages(() => ["in",
-                (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
+        ldebugMessages(() => ["in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
 
         if (peer === undefined) {
             peer = {
-                sendMessage: (json: any) => {
-                    ws.send(JSON.stringify(json), false, false);
-                    ldebugMessages(() => ["out",
-                            peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json]);
-                }
+                sendMessage: (jsonToSend: any) => {
+                    ws.send(JSON.stringify(jsonToSend), false, false);
+                    ldebugMessages(() => ["out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", jsonToSend]);
+                },
             };
             (ws as any).peer = peer;
         }
@@ -131,25 +149,5 @@ export class UWebSocketsTracker {
         }
 
         debugWebSockets("closed with code", code);
-    }
-
-    public async run() {
-        let resolve: () => void;
-        let reject: (error: any) => void;
-
-        const promise = new Promise<void>((resolvePromise, rejectPromise) => {
-            resolve = resolvePromise;
-            reject = rejectPromise;
-        });
-
-        this.app_.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
-            if (token) {
-                resolve();
-            } else {
-                reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
-            }
-        });
-
-        return promise;
     }
 }

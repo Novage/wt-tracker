@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- import { FastTracker } from "../lib/fast-tracker";
+import { FastTracker } from "../lib/fast-tracker";
 import { PeerContext } from "../lib/tracker";
 import { expect } from "chai";
 
@@ -29,12 +29,11 @@ describe("simulation", () => {
         const tracker = new FastTracker();
 
         const peers: PeerContext[] = [];
-        const peersData: { infoHash?: string, peerId: string }[] = [];
+        const peersData: Array<{ infoHash?: string, peerId: string }> = [];
 
         for (let i = 0; i < peersCount; i++) {
             peers.push({
-                sendMessage: function (json: any) {
-                }
+                sendMessage: (json: any) => {},
             });
             peersData.push({ peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString() });
         }
@@ -44,15 +43,13 @@ describe("simulation", () => {
             info_hash: "",
             peer_id: "",
             offers: new Array<any>(),
-            numwant: 100
+            numwant: 100,
         };
 
         for (let i = 0; i < offersCount; i++) {
             announceMessage.offers.push({
-                offer: {
-                    sdp: "x"
-                },
-                offer_id: i.toString()
+                offer: { sdp: "x" },
+                offer_id: i.toString(),
             });
         }
 
@@ -68,7 +65,7 @@ describe("simulation", () => {
                         action: "announce",
                         event: "stopped",
                         info_hash: peerData.infoHash,
-                        peer_id: peer.id
+                        peer_id: peer.id,
                     }, peer);
                     peerData.infoHash = undefined;
 
@@ -119,7 +116,7 @@ describe("simulation", () => {
             }
         }
 
-        expect(tracker.stats.torrentsCount == torrents.size);
-        expect(tracker.stats.peersCount == activePeersCount);
+        expect(tracker.stats.torrentsCount === torrents.size);
+        expect(tracker.stats.peersCount === activePeersCount);
     });
 });

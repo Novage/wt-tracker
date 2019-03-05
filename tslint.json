@@ -1,59 +1,17 @@
 {
   "rules": {
-    "class-name": true,
-    "indent": [
-      true,
-      "spaces",
-      4
-    ],
-    "one-line": [
-      true,
-      "check-else",
-      "check-open-brace",
-      "check-whitespace"
-    ],
-    "no-var-keyword": true,
-    "quotemark": [
-      true,
-      "double",
-      "avoid-escape"
-    ],
-    "semicolon": [
-      true,
-      "always",
-      "ignore-bound-class-methods"
-    ],
-    "whitespace": [
-      true,
-      "check-branch",
-      "check-decl",
-      "check-operator",
-      "check-separator",
-      "check-type"
-    ],
-    "typedef-whitespace": [
-      true,
-      {
-        "call-signature": "nospace",
-        "index-signature": "nospace",
-        "parameter": "nospace",
-        "property-declaration": "nospace",
-        "variable-declaration": "nospace"
-      },
-      {
-        "call-signature": "onespace",
-        "index-signature": "onespace",
-        "parameter": "onespace",
-        "property-declaration": "onespace",
-        "variable-declaration": "onespace"
-      }
-    ],
-    "no-internal-module": true,
-    "no-trailing-whitespace": true,
-    "prefer-const": true,
-    "jsdoc-format": true,
-    "eofline": true
+    "indent": [true, "spaces", 4],
+    "triple-equals": [true, "allow-undefined-check"],
+    "object-literal-sort-keys": false,
+    "ordered-imports": false,
+    "arrow-parens": [true, "ban-single-arg-parens"],
+    "object-literal-shorthand": [true, "never"],
+    "interface-name": [true, "never-prefix"],
+    "max-line-length": [true, 150],
+    "no-empty": [true, "allow-empty-functions"],
+    "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"],
+    "no-implicit-dependencies": [true, ["chai"]]
   },
-  "defaultSeverity": "warning",
-  "extends": ["tslint-sonarts"]
+  "defaultSeverity": "error",
+  "extends": ["tslint:latest", "tslint-sonarts"]
 }

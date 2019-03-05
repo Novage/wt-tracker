@@ -29,17 +29,17 @@ export class FastTracker implements Tracker {
         this.settings = {
             maxOffers: 20,
             announceInterval: 120,
-            ...(settings ? settings : {})
+            ...(settings ? settings : {}),
         };
     }
 
     public processMessage(json: any, peer: PeerContext) {
-        const action: string | undefined | null = json.action;
+        const action: any = json.action;
 
         if (action === "announce") {
-            const event: string | undefined | null = json.event;
+            const event: any = json.event;
 
-            if (event == undefined) {
+            if (event === undefined) {
                 if (json.answer === undefined) {
                     this.processAnnounce(json, peer);
                 } else {
@@ -59,6 +59,29 @@ export class FastTracker implements Tracker {
         } else {
             throw new TrackerError("unknown action");
         }
+    }
+
+    public disconnectPeer(peer: PeerContext) {
+        const peerId = peer.id;
+        if (peerId === undefined) {
+            return;
+        }
+
+        ldebug(() => ["disconnect peer:", Buffer.from(peerId).toString("hex")]);
+
+        for (const swarmContext of (peer as InternalPeerContext).swarms!) {
+            const swarm = swarmContext.swarm;
+            swarm.removePeer(peer);
+            if (swarm.peers.size === 0) {
+                ldebug(() => ["swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex")]);
+                this.swarms.delete(swarm.infoHash);
+            } else if (swarmContext.completed) {
+                swarm.completedCount--;
+            }
+        }
+
+        peer.id = undefined;
+        (peer as InternalPeerContext).swarms = undefined;
     }
 
     private processAnnounce(json: any, peer: InternalPeerContext, completed: boolean = false) {
@@ -98,7 +121,7 @@ export class FastTracker implements Tracker {
             interval: this.settings.announceInterval,
             info_hash: infoHash,
             complete: swarm.completedCount,
-            incomplete: swarm.peers.size - swarm.completedCount
+            incomplete: swarm.peers.size - swarm.completedCount,
         });
 
         this.sendOffersToPeers(json, swarmPeers, peer, infoHash);
@@ -151,7 +174,7 @@ export class FastTracker implements Tracker {
         const countPeersToSend = peers.length - 1;
         const countOffersToSend = Math.min(countPeersToSend, offers.length, this.settings.maxOffers, numwant);
 
-        let peerIndex = (countOffersToSend == countPeersToSend) ? 0 : Math.floor(Math.random() * peers.length);
+        let peerIndex = (countOffersToSend === countPeersToSend) ? 0 : Math.floor(Math.random() * peers.length);
 
         for (let i = 0; i < countOffersToSend; i++) {
             const toPeer = peers[peerIndex];
@@ -163,7 +186,7 @@ export class FastTracker implements Tracker {
             }
 
             peerIndex++;
-            if (peerIndex == peers.length) {
+            if (peerIndex === peers.length) {
                 peerIndex = 0;
             }
         }
@@ -218,33 +241,10 @@ export class FastTracker implements Tracker {
 
         ldebug(() => ["stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex")]);
 
-        if (swarm.peers.size == 0) {
+        if (swarm.peers.size === 0) {
             ldebug(() => ["stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex")]);
             this.swarms.delete(infoHash);
         }
-    }
-
-    public disconnectPeer(peer: PeerContext) {
-        const peerId = peer.id;
-        if (peerId === undefined) {
-            return;
-        }
-
-        ldebug(() => ["disconnect peer:", Buffer.from(peerId).toString("hex")]);
-
-        for (const swarmContext of (peer as InternalPeerContext).swarms!) {
-            const swarm = swarmContext.swarm;
-            swarm.removePeer(peer);
-            if (swarm.peers.size == 0) {
-                ldebug(() => ["swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex")]);
-                this.swarms.delete(swarm.infoHash);
-            } else if (swarmContext.completed) {
-                swarm.completedCount--;
-            }
-        }
-
-        peer.id = undefined;
-        (peer as InternalPeerContext).swarms = undefined;
     }
 
     private processScrape(json: any, peer: PeerContext) {
@@ -256,7 +256,7 @@ export class FastTracker implements Tracker {
                 files[swarm.infoHash] = {
                     complete: swarm.completedCount,
                     incomplete: swarm.peersOrdered.length - swarm.completedCount,
-                    downloaded: swarm.completedCount
+                    downloaded: swarm.completedCount,
                 };
             }
         } else if (infoHash instanceof Array) {
@@ -266,13 +266,13 @@ export class FastTracker implements Tracker {
                     files[singleInfoHash] = {
                         complete: swarm.completedCount,
                         incomplete: swarm.peersOrdered.length - swarm.completedCount,
-                        downloaded: swarm.completedCount
+                        downloaded: swarm.completedCount,
                     };
                 } else if (typeof singleInfoHash === "string") {
                     files[singleInfoHash] = {
                         complete: 0,
                         incomplete: 0,
-                        downloaded: 0
+                        downloaded: 0,
                     };
                 }
             }
@@ -282,20 +282,20 @@ export class FastTracker implements Tracker {
                 files[infoHash] = {
                     complete: swarm.completedCount,
                     incomplete: swarm.peersOrdered.length - swarm.completedCount,
-                    downloaded: swarm.completedCount
+                    downloaded: swarm.completedCount,
                 };
             } else if (typeof infoHash === "string") {
                 files[infoHash] = {
                     complete: 0,
                     incomplete: 0,
-                    downloaded: 0
+                    downloaded: 0,
                 };
             }
         }
 
         peer.sendMessage({
             action: "scrape",
-            files: files
+            files: files,
         });
     }
 
@@ -306,7 +306,7 @@ export class FastTracker implements Tracker {
         }
         return {
             torrentsCount: this.swarms.size,
-            peersCount: peersCount
+            peersCount: peersCount,
         };
     }
 }
@@ -320,41 +320,43 @@ interface InternalPeerContext extends PeerContext {
     swarms?: SwarmContext[];
 }
 
+// tslint:disable-next-line:max-classes-per-file
 class Swarm {
-    private peers_ = new Map<string, InternalPeerContext>();
-    private peersOrdered_: InternalPeerContext[] = [];
     public completedCount = 0;
+
+    private _peers = new Map<string, InternalPeerContext>();
+    private _peersOrdered: InternalPeerContext[] = [];
 
     constructor(readonly infoHash: string) {}
 
     public addPeer(peer: InternalPeerContext) {
         const peerId = peer.id!;
-        this.peersOrdered_.push(peer);
-        this.peers_.set(peerId, peer);
+        this._peersOrdered.push(peer);
+        this._peers.set(peerId, peer);
     }
 
     public removePeer(peer: InternalPeerContext) {
-        this.peers_.delete(peer.id!);
+        this._peers.delete(peer.id!);
 
         // Delete peerId from array without calling splice
-        const index = this.peersOrdered_.indexOf(peer);
-        const last = this.peersOrdered_.pop()!;
-        if (index < this.peersOrdered_.length) {
-            this.peersOrdered_[index] = last;
+        const index = this._peersOrdered.indexOf(peer);
+        const last = this._peersOrdered.pop()!;
+        if (index < this._peersOrdered.length) {
+            this._peersOrdered[index] = last;
         }
     }
 
     public get peers(): ReadonlyMap<string, InternalPeerContext> {
-        return this.peers_;
+        return this._peers;
     }
 
     public get peersOrdered(): ReadonlyArray<InternalPeerContext> {
-        return this.peersOrdered_;
+        return this._peersOrdered;
     }
 }
 
 function sendOffer(offerItem: {offer?: { sdp?: string }, offer_id?: string } | null, fromPeerId: string, toPeer: PeerContext, infoHash: string) {
-    if (offerItem == null) {
+    if (offerItem === null) {
         throw new TrackerError("announce: wrong offer item format");
     }
 
@@ -372,8 +374,8 @@ function sendOffer(offerItem: {offer?: { sdp?: string }, offer_id?: string } | n
         peer_id: fromPeerId,
         offer: {
             type: "offer",
-            sdp: offer.sdp // offer.sdp is not validated to be a string
-        }
+            sdp: offer.sdp, // offer.sdp is not validated to be a string
+        },
     });
 }
 

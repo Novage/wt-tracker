@@ -19,6 +19,8 @@ import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
 
+// tslint:disable:no-console
+
 async function main() {
     let settingsFileData;
 
@@ -58,7 +60,7 @@ async function main() {
             response.writeHeader("Content-Type", "application/json")
             .end(JSON.stringify({
                 ...tracker.stats,
-                ...server.stats
+                ...server.stats,
             }));
         })
         .get("/*", (response: HttpResponse, request: HttpRequest) => {

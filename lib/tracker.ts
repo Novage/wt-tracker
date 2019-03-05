@@ -20,10 +20,10 @@ export interface PeerContext {
 }
 
 export interface Tracker {
-    processMessage(json: any, peer: PeerContext): void;
-    disconnectPeer(peer: PeerContext): void;
     readonly stats: { [x: string]: any; };
     readonly settings: any;
+    processMessage(json: any, peer: PeerContext): void;
+    disconnectPeer(peer: PeerContext): void;
 }
 
 export class TrackerError extends Error { }
