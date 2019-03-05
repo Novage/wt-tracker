@@ -23,6 +23,7 @@ import { ldebug } from "./lambda-debug";
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const ldebugMessages = ldebug(Debug("wt-tracker:uws-tracker-messages"));
+const decoder = new StringDecoder();
 
 export class UWebSocketsTracker {
     private app_: TemplatedApp;
@@ -62,8 +63,6 @@ export class UWebSocketsTracker {
     }
 
     private buildApplication() {
-        const decoder = new StringDecoder();
-
         this.app_
         .ws(this.settings.websockets.path, {
             compression: this.settings.websockets.compression,
@@ -73,59 +72,65 @@ export class UWebSocketsTracker {
                 this.webSocketsCount++;
                 debugWebSockets("connected via URL", request.getUrl());
             },
-            message: (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {
-                debugWebSockets("message of size", message.byteLength);
-
-                let json: any;
-                try {
-                    json = JSON.parse(decoder.end(new Uint8Array(message) as any));
-                } catch (e) {
-                    debugWebSockets("failed to parse JSON message", e);
-                    ws.close();
-                    return;
-                }
-
-                let peer: PeerContext | undefined = (ws as any).peer;
-
-                ldebugMessages(() => ["in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
-
-                if (peer === undefined) {
-                    peer = {
-                        sendMessage: (json: any) => {
-                            ws.send(JSON.stringify(json), false, false);
-                            ldebugMessages(() => ["out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json]);
-                        }
-                    };
-                    (ws as any).peer = peer;
-                }
-
-                try {
-                    this.tracker.processMessage(json, peer);
-                } catch (e) {
-                    if (e instanceof TrackerError) {
-                        debugWebSockets("failed to process message from the peer:", e);
-                    } else {
-                        throw e;
-                    }
-                    ws.close();
-                    return;
-                }
-            },
             drain: (ws: WebSocket) => {
-                debugWebSockets("backpressure", ws.getBufferedAmount());
+                debugWebSockets("drain", ws.getBufferedAmount());
             },
-            close: (ws: WebSocket, code: number, message: ArrayBuffer) => {
-                this.webSocketsCount--;
-                const peer: PeerContext | undefined = (ws as any).peer;
-
-                if (peer !== undefined) {
-                    delete (ws as any).peer;
-                    this.tracker.disconnectPeer(peer);
-                }
-
-                debugWebSockets("closed with code", code);
-            }
+            message: this.onMessage,
+            close: this.onClose
         });
+    }
+
+    private onMessage = (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {
+        debugWebSockets("message of size", message.byteLength);
+
+        let json: any;
+        try {
+            json = JSON.parse(decoder.end(new Uint8Array(message) as any));
+        } catch (e) {
+            debugWebSockets("failed to parse JSON message", e);
+            ws.close();
+            return;
+        }
+
+        let peer: PeerContext | undefined = (ws as any).peer;
+
+        ldebugMessages(() => ["in",
+                (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
+
+        if (peer === undefined) {
+            peer = {
+                sendMessage: (json: any) => {
+                    ws.send(JSON.stringify(json), false, false);
+                    ldebugMessages(() => ["out",
+                            peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json]);
+                }
+            };
+            (ws as any).peer = peer;
+        }
+
+        try {
+            this.tracker.processMessage(json, peer);
+        } catch (e) {
+            if (e instanceof TrackerError) {
+                debugWebSockets("failed to process message from the peer:", e);
+            } else {
+                throw e;
+            }
+            ws.close();
+            return;
+        }
+    }
+
+    private onClose = () => (ws: WebSocket, code: number, message: ArrayBuffer) => {
+        this.webSocketsCount--;
+        const peer: PeerContext | undefined = (ws as any).peer;
+
+        if (peer !== undefined) {
+            delete (ws as any).peer;
+            this.tracker.disconnectPeer(peer);
+        }
+
+        debugWebSockets("closed with code", code);
     }
 
     public async run() {

@@ -54,5 +54,6 @@
     "jsdoc-format": true,
     "eofline": true
   },
-  "defaultSeverity": "warning"
+  "defaultSeverity": "warning",
+  "extends": ["tslint-sonarts"]
 }

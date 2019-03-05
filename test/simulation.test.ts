@@ -112,7 +112,7 @@ describe("simulation", () => {
 
                 if ((peer as any).swarms[0].swarm.peers.get(peerData.peerId) === peer) {
                     activePeersCount++;
-                    torrents.add(peerData.infoHash!);
+                    torrents.add(peerData.infoHash);
                 }
             } else {
                 expect(((peer as any).swarms === undefined) || ((peer as any).swarms.length === 0), "the peer should not be in a swarm");

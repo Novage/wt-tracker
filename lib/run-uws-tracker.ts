@@ -73,8 +73,10 @@ async function main() {
     }
 }
 
-try {
-    main();
-} catch (e) {
-    console.error(e);
-}
+(async () => {
+    try {
+        await main();
+    } catch (e) {
+        console.error(e);
+    }
+})();

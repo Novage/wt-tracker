@@ -62,8 +62,8 @@ export class FastTracker implements Tracker {
     }
 
     private processAnnounce(json: any, peer: InternalPeerContext, completed: boolean = false) {
-        const infoHash: string = json.info_hash;
-        const peerId: string = json.peer_id;
+        const infoHash = json.info_hash;
+        const peerId = json.peer_id;
 
         let swarmContext: SwarmContext | undefined;
 
@@ -82,28 +82,7 @@ export class FastTracker implements Tracker {
         }
 
         if (swarmContext === undefined) {
-            let swarm = this.swarms.get(infoHash);
-
-            if (swarm === undefined) {
-                if (typeof infoHash !== "string") {
-                    throw new TrackerError("announce: info_hash field is missing or wrong");
-                }
-
-                ldebug(() => ["announce: swarm created:", Buffer.from(infoHash).toString("hex")]);
-                swarm = new Swarm(infoHash);
-                this.swarms.set(infoHash, swarm);
-            }
-
-            ldebug(() => ["announce: peer", Buffer.from(peerId).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex")]);
-
-            const previousPeer = swarm.peers.get(peerId);
-            if (previousPeer !== undefined) {
-                removePeerFromSwarm(previousPeer, infoHash);
-            }
-
-            swarm.addPeer(peer);
-            swarmContext = { completed: false, swarm: swarm };
-            peer.swarms!.push(swarmContext);
+            swarmContext = this.addPeerToSwarm(peer, infoHash);
         }
 
         const swarm = swarmContext.swarm;
@@ -122,15 +101,46 @@ export class FastTracker implements Tracker {
             incomplete: swarm.peers.size - swarm.completedCount
         });
 
-        const offers: any[] | undefined = json.offers;
+        this.sendOffersToPeers(json, swarmPeers, peer, infoHash);
+    }
+
+    private addPeerToSwarm(peer: InternalPeerContext, infoHash: any) {
+        let swarm = this.swarms.get(infoHash);
+
+        if (swarm === undefined) {
+            if (typeof infoHash !== "string") {
+                throw new TrackerError("announce: info_hash field is missing or wrong");
+            }
+
+            ldebug(() => ["announce: swarm created:", Buffer.from(infoHash).toString("hex")]);
+            swarm = new Swarm(infoHash);
+            this.swarms.set(infoHash, swarm);
+        }
+
+        ldebug(() => ["announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex")]);
+
+        const previousPeer = swarm.peers.get(peer.id!);
+        if (previousPeer !== undefined) {
+            removePeerFromSwarm(previousPeer, infoHash);
+        }
+
+        swarm.addPeer(peer);
+        const swarmContext = { completed: false, swarm: swarm };
+        peer.swarms!.push(swarmContext);
+
+        return swarmContext;
+    }
+
+    private sendOffersToPeers(json: any, peers: ReadonlyArray<InternalPeerContext>, peer: InternalPeerContext, infoHash: string) {
+        if (peers.length <= 1) {
+            return;
+        }
+
+        const offers: any = json.offers;
         if (offers == undefined) {
             return;
         } else if (!(offers instanceof Array)) {
             throw new TrackerError("announce: offers field is not an array");
-        }
-
-        if (swarmPeers.length <= 1) {
-            return;
         }
 
         const numwant = json.numwant;
@@ -138,33 +148,23 @@ export class FastTracker implements Tracker {
             return;
         }
 
-        const countPeersToSend = swarmPeers.length - 1;
+        const countPeersToSend = peers.length - 1;
         const countOffersToSend = Math.min(countPeersToSend, offers.length, this.settings.maxOffers, numwant);
 
-        if (countOffersToSend == countPeersToSend) {
-            // we have offers for all the peers from the swarm - send offers to all
-            const offersIterator = offers.values();
-            for (const toPeer of swarmPeers) {
-                if (toPeer !== peer) {
-                    sendOffer(offersIterator.next().value, peerId, toPeer, infoHash);
-                }
+        let peerIndex = (countOffersToSend == countPeersToSend) ? 0 : Math.floor(Math.random() * peers.length);
+
+        for (let i = 0; i < countOffersToSend; i++) {
+            const toPeer = peers[peerIndex];
+
+            if (toPeer === peer) {
+                i--; // do one more iteration
+            } else {
+                sendOffer(offers[i], peer.id!, toPeer, infoHash);
             }
-        } else {
-            let peerIndex = Math.floor(Math.random() * swarmPeers.length);
-            // send offers to random peers
-            for (let i = 0; i < countOffersToSend; i++) {
-                const toPeer = swarmPeers[peerIndex];
 
-                if (toPeer === peer) {
-                    i--; // do one more iteration
-                } else {
-                    sendOffer(offers[i], peerId, toPeer, infoHash);
-                }
-
-                peerIndex++;
-                if (peerIndex == swarmPeers.length) {
-                    peerIndex = 0;
-                }
+            peerIndex++;
+            if (peerIndex == peers.length) {
+                peerIndex = 0;
             }
         }
 

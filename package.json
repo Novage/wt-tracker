@@ -54,6 +54,7 @@
     "nyc": "^13.3.0",
     "rimraf": "^2.6.3",
     "tslint": "^5.13.1",
+    "tslint-sonarts": "^1.9.0",
     "typescript": "^3.3.3333"
   }
 }
