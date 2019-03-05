@@ -18,9 +18,14 @@ import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.j
 import { Tracker, PeerContext, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
 
+import * as Debug from "debug";
+import { ldebug } from "./lambda-debug";
+
+const debugWebSockets = Debug("wt-tracker:uws-tracker");
+const ldebugMessages = ldebug(Debug("wt-tracker:uws-tracker-messages"));
+
 export class UWebSocketsTracker {
     private app_: TemplatedApp;
-    private logLevel: number;
     private webSocketsCount: number = 0;
 
     get app() {
@@ -45,12 +50,9 @@ export class UWebSocketsTracker {
                 maxPayloadLength: 64 * 1024,
                 idleTimeout: 240,
                 compression: 1,
-                logLevel: 0,
                 ...((settings && settings.websockets) ? settings.websockets : {})
             }
         };
-
-        this.logLevel = this.settings.websockets.logLevel;
 
         this.app_ = this.settings.server.key_file_name === undefined
                 ? App(this.settings.server)
@@ -69,29 +71,29 @@ export class UWebSocketsTracker {
             idleTimeout: this.settings.websockets.idleTimeout,
             open: (ws: WebSocket, request: HttpRequest) => {
                 this.webSocketsCount++;
-                if (this.logLevel === 1) console.info("ws connected via URL", request.getUrl());
+                debugWebSockets("connected via URL", request.getUrl());
             },
             message: (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {
-                if (this.logLevel === 1) console.info("ws message of size", message.byteLength);
+                debugWebSockets("message of size", message.byteLength);
 
-                let json;
+                let json: any;
                 try {
                     json = JSON.parse(decoder.end(new Uint8Array(message) as any));
                 } catch (e) {
-                    if (this.logLevel === 1) console.warn("failed to parse JSON message", e);
+                    debugWebSockets("failed to parse JSON message", e);
                     ws.close();
                     return;
                 }
 
                 let peer: PeerContext | undefined = (ws as any).peer;
 
-                if (this.logLevel === 2) console.log("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
+                ldebugMessages(() => ["in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
 
                 if (peer === undefined) {
                     peer = {
                         sendMessage: (json: any) => {
                             ws.send(JSON.stringify(json), false, false);
-                            if (this.logLevel === 2) console.log("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json);
+                            ldebugMessages(() => ["out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", json]);
                         }
                     };
                     (ws as any).peer = peer;
@@ -101,7 +103,7 @@ export class UWebSocketsTracker {
                     this.tracker.processMessage(json, peer);
                 } catch (e) {
                     if (e instanceof TrackerError) {
-                        if (this.logLevel === 1) console.log("failed to process message from the peer:", e);
+                        debugWebSockets("failed to process message from the peer:", e);
                     } else {
                         throw e;
                     }
@@ -110,7 +112,7 @@ export class UWebSocketsTracker {
                 }
             },
             drain: (ws: WebSocket) => {
-                if (this.logLevel === 1) console.info("ws backpressure", ws.getBufferedAmount());
+                debugWebSockets("backpressure", ws.getBufferedAmount());
             },
             close: (ws: WebSocket, code: number, message: ArrayBuffer) => {
                 this.webSocketsCount--;
@@ -121,7 +123,7 @@ export class UWebSocketsTracker {
                     this.tracker.disconnectPeer(peer);
                 }
 
-                if (this.logLevel === 1) console.info("ws closed with code", code);
+                debugWebSockets("closed with code", code);
             }
         });
     }

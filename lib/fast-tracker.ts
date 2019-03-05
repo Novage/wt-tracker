@@ -16,19 +16,21 @@
 
 import { Tracker, PeerContext, TrackerError } from "./tracker";
 
+import * as DebugModule from "debug";
+import { ldebug as ldebugConstructor } from "./lambda-debug";
+
+const debug = DebugModule("wt-tracker:fast-tracker");
+const ldebug = ldebugConstructor(debug);
+
 export class FastTracker implements Tracker {
     private swarms = new Map<string, Swarm>();
-    private logLevel: number;
 
     constructor(readonly settings: any = {}) {
         this.settings = {
             maxOffers: 20,
-            logLevel: 0,
             announceInterval: 120,
             ...(settings ? settings : {})
         };
-
-        this.logLevel = this.settings.logLevel;
     }
 
     public processMessage(json: any, peer: PeerContext) {
@@ -87,12 +89,12 @@ export class FastTracker implements Tracker {
                     throw new TrackerError("announce: info_hash field is missing or wrong");
                 }
 
-                if (this.logLevel) console.log("announce: swarm created:", Buffer.from(infoHash).toString("hex"));
+                ldebug(() => ["announce: swarm created:", Buffer.from(infoHash).toString("hex")]);
                 swarm = new Swarm(infoHash);
                 this.swarms.set(infoHash, swarm);
             }
 
-            if (this.logLevel) console.log("announce: peer", Buffer.from(peerId).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex"));
+            ldebug(() => ["announce: peer", Buffer.from(peerId).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex")]);
 
             const previousPeer = swarm.peers.get(peerId);
             if (previousPeer !== undefined) {
@@ -166,7 +168,7 @@ export class FastTracker implements Tracker {
             }
         }
 
-        if (this.logLevel) console.log("announce: sent offers", countOffersToSend < 0 ? 0 : countOffersToSend);
+        debug("announce: sent offers", countOffersToSend < 0 ? 0 : countOffersToSend);
     }
 
     private processAnswer(json: any, peer: InternalPeerContext) {
@@ -192,7 +194,7 @@ export class FastTracker implements Tracker {
         delete json.to_peer_id;
         toPeer.sendMessage(json);
 
-        if (this.logLevel) console.log("answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex"));
+        ldebug(() => ["answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex")]);
     }
 
     private processStop(json: any, peer: InternalPeerContext) {
@@ -210,14 +212,14 @@ export class FastTracker implements Tracker {
         const swarm = removePeerFromSwarm(peer, infoHash);
 
         if (swarm === undefined) {
-            if (this.logLevel) console.log("stop event: peer not in the swarm");
+            debug("stop event: peer not in the swarm");
             return;
         }
 
-        if (this.logLevel) console.log("stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex"));
+        ldebug(() => ["stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex")]);
 
         if (swarm.peers.size == 0) {
-            if (this.logLevel) console.log("stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex"));
+            ldebug(() => ["stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex")]);
             this.swarms.delete(infoHash);
         }
     }
@@ -228,13 +230,13 @@ export class FastTracker implements Tracker {
             return;
         }
 
-        if (this.logLevel) console.log("disconnect peer:", Buffer.from(peerId).toString("hex"));
+        ldebug(() => ["disconnect peer:", Buffer.from(peerId).toString("hex")]);
 
         for (const swarmContext of (peer as InternalPeerContext).swarms!) {
             const swarm = swarmContext.swarm;
             swarm.removePeer(peer);
             if (swarm.peers.size == 0) {
-                if (this.logLevel) console.log("swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
+                ldebug(() => ["swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex")]);
                 this.swarms.delete(swarm.infoHash);
             } else if (swarmContext.completed) {
                 swarm.completedCount--;

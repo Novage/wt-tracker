@@ -12,13 +12,11 @@
     "path": "/",
     "maxPayloadLength": 65536,
     "idleTimeout": 240,
-    "compression": 1,
-    "logLevel": 0
+    "compression": 1
   },
 
   "tracker": {
     "maxOffers": 20,
-    "announceInterval": 120,
-    "logLevel": 0
+    "announceInterval": 120
   }
 }
