@@ -21,8 +21,8 @@ import { expect } from "chai";
 describe("simulation", () => {
     it("should pass random simulations", () => {
         const simulationsCount = 1000;
-        const torrentsCount = 3;
-        const peersCount = 300;
+        const torrentsCount = 2;
+        const peersCount = 200;
         const offersCount = 10;
         const sameIdPeersRatio = 0.1;
 
@@ -93,30 +93,13 @@ describe("simulation", () => {
             doIteration();
         }
 
-        let activePeersCount = 0;
-        const torrents = new Set<string>();
-
-        for (let i = 0; i < peers.length; i++) {
-            const peer = peers[i];
-            const peerData = peersData[i];
-
-            if (peerData.infoHash) {
-                if ((peer as any).swarms.length !== 1) {
-                    continue;
-                }
-
-                expect((peer as any).swarms[0].swarm.infoHash === peerData.infoHash, "the peer is in a wrong swarm");
-
-                if ((peer as any).swarms[0].swarm.peers.get(peerData.peerId) === peer) {
-                    activePeersCount++;
-                    torrents.add(peerData.infoHash);
-                }
-            } else {
-                expect(((peer as any).swarms === undefined) || ((peer as any).swarms.length === 0), "the peer should not be in a swarm");
+        for (const [swarmId, swarm] of tracker.swarms) {
+            expect(swarm.peers.size > 0, "the swarm can't be empty");
+            for (const peer of swarm.peers.values()) {
+                const peerData = peersData.find(p => p.peerId === peer.id);
+                expect(peerData === undefined, "the peer is missing");
+                expect(peerData!.infoHash === swarmId, "the peer is in a wrong swarm");
             }
         }
-
-        expect(tracker.stats.torrentsCount === torrents.size);
-        expect(tracker.stats.peersCount === activePeersCount);
     });
 });

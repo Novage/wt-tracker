@@ -57,9 +57,16 @@ async function main() {
 
         server.app
         .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
+            const swarms = tracker.swarms;
+            let peersCount = 0;
+            for (const swarm of swarms.values()) {
+                peersCount += swarm.peers.size;
+            }
+
             response.writeHeader("Content-Type", "application/json")
             .end(JSON.stringify({
-                ...tracker.stats,
+                torrentsCount: swarms.size,
+                peersCount: peersCount,
                 ...server.stats,
             }));
         })

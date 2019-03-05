@@ -23,7 +23,7 @@ const debug = DebugModule("wt-tracker:fast-tracker");
 const ldebug = ldebugConstructor(debug);
 
 export class FastTracker implements Tracker {
-    private swarms = new Map<string, Swarm>();
+    private _swarms = new Map<string, Swarm>();
 
     constructor(readonly settings: any = {}) {
         this.settings = {
@@ -31,6 +31,10 @@ export class FastTracker implements Tracker {
             announceInterval: 120,
             ...(settings ? settings : {}),
         };
+    }
+
+    public get swarms(): ReadonlyMap<string, { peers: ReadonlyMap<string, PeerContext> }> {
+        return this._swarms;
     }
 
     public processMessage(json: any, peer: PeerContext) {
@@ -74,7 +78,7 @@ export class FastTracker implements Tracker {
             swarm.removePeer(peer);
             if (swarm.peers.size === 0) {
                 ldebug(() => ["swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex")]);
-                this.swarms.delete(swarm.infoHash);
+                this._swarms.delete(swarm.infoHash);
             } else if (swarmContext.completed) {
                 swarm.completedCount--;
             }
@@ -128,7 +132,7 @@ export class FastTracker implements Tracker {
     }
 
     private addPeerToSwarm(peer: InternalPeerContext, infoHash: any) {
-        let swarm = this.swarms.get(infoHash);
+        let swarm = this._swarms.get(infoHash);
 
         if (swarm === undefined) {
             if (typeof infoHash !== "string") {
@@ -137,7 +141,7 @@ export class FastTracker implements Tracker {
 
             ldebug(() => ["announce: swarm created:", Buffer.from(infoHash).toString("hex")]);
             swarm = new Swarm(infoHash);
-            this.swarms.set(infoHash, swarm);
+            this._swarms.set(infoHash, swarm);
         }
 
         ldebug(() => ["announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex")]);
@@ -243,7 +247,7 @@ export class FastTracker implements Tracker {
 
         if (swarm.peers.size === 0) {
             ldebug(() => ["stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex")]);
-            this.swarms.delete(infoHash);
+            this._swarms.delete(infoHash);
         }
     }
 
@@ -252,7 +256,7 @@ export class FastTracker implements Tracker {
         const files: {[key: string]: { complete: number, incomplete: number, downloaded: number}} = {};
 
         if (infoHash === undefined) {
-            for (const swarm of this.swarms.values()) {
+            for (const swarm of this._swarms.values()) {
                 files[swarm.infoHash] = {
                     complete: swarm.completedCount,
                     incomplete: swarm.peersOrdered.length - swarm.completedCount,
@@ -261,7 +265,7 @@ export class FastTracker implements Tracker {
             }
         } else if (infoHash instanceof Array) {
             for (const singleInfoHash of infoHash) {
-                const swarm = this.swarms.get(singleInfoHash);
+                const swarm = this._swarms.get(singleInfoHash);
                 if (swarm !== undefined) {
                     files[singleInfoHash] = {
                         complete: swarm.completedCount,
@@ -277,7 +281,7 @@ export class FastTracker implements Tracker {
                 }
             }
         } else {
-            const swarm = this.swarms.get(infoHash);
+            const swarm = this._swarms.get(infoHash);
             if (swarm !== undefined) {
                 files[infoHash] = {
                     complete: swarm.completedCount,
@@ -297,17 +301,6 @@ export class FastTracker implements Tracker {
             action: "scrape",
             files: files,
         });
-    }
-
-    public get stats() {
-        let peersCount = 0;
-        for (const swarm of this.swarms.values()) {
-            peersCount += swarm.peers.size;
-        }
-        return {
-            torrentsCount: this.swarms.size,
-            peersCount: peersCount,
-        };
     }
 }
 
