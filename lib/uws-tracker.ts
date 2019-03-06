@@ -63,23 +63,15 @@ export class UWebSocketsTracker {
     }
 
     public async run() {
-        let resolve: () => void;
-        let reject: (error: any) => void;
-
-        const promise = new Promise<void>((resolvePromise, rejectPromise) => {
-            resolve = resolvePromise;
-            reject = rejectPromise;
+        return new Promise<void>((resolve, reject) => {
+            this._app.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
+                if (token) {
+                    resolve();
+                } else {
+                    reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
+                }
+            });
         });
-
-        this._app.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
-            if (token) {
-                resolve();
-            } else {
-                reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
-            }
-        });
-
-        return promise;
     }
 
     private buildApplication() {
