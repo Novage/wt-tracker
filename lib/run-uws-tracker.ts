@@ -76,9 +76,9 @@ async function main() {
         });
 
         await server.run();
-        console.info("listening to port", server.settings.server.port);
+        console.info(`listening ${server.settings.server.host}:${server.settings.server.port}`);
     } catch (e) {
-        console.error("failed to start Web server:", e.toString());
+        console.error("failed to start the web server:", e.toString());
     }
 }
 
