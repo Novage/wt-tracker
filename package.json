@@ -11,7 +11,7 @@
     "node": ">=10.0.0"
   },
   "bin": {
-    "wt-tracker": "./dist/run-uws-tracker.js"
+    "wt-tracker": "./bin/wt-tracker"
   },
   "keywords": [
     "p2p",

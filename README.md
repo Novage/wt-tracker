@@ -21,6 +21,12 @@ npm run build
 ## Run instructions
 
 ```sh
+./bin/wt-tracker [config.json]
+```
+
+or
+
+```sh
 node dist/run-uws-tracker.js [config.json]
 ```
 
