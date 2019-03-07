@@ -158,6 +158,7 @@ export class FastTracker implements Tracker {
         return swarmContext;
     }
 
+    // tslint:disable-next-line:cognitive-complexity
     private sendOffersToPeers(json: any, peers: ReadonlyArray<InternalPeerContext>, peer: InternalPeerContext, infoHash: string) {
         if (peers.length <= 1) {
             return;
@@ -178,20 +179,31 @@ export class FastTracker implements Tracker {
         const countPeersToSend = peers.length - 1;
         const countOffersToSend = Math.min(countPeersToSend, offers.length, this.settings.maxOffers, numwant);
 
-        let peerIndex = (countOffersToSend === countPeersToSend) ? 0 : Math.floor(Math.random() * peers.length);
-
-        for (let i = 0; i < countOffersToSend; i++) {
-            const toPeer = peers[peerIndex];
-
-            if (toPeer === peer) {
-                i--; // do one more iteration
-            } else {
-                sendOffer(offers[i], peer.id!, toPeer, infoHash);
+        if (countOffersToSend === countPeersToSend) {
+            // we have offers for all the peers from the swarm - send offers to all
+            const offersIterator = offers.values();
+            for (const toPeer of peers) {
+                if (toPeer !== peer) {
+                    sendOffer(offersIterator.next().value, peer.id!, toPeer, infoHash);
+                }
             }
+        } else {
+            // send offers to random peers
+            let peerIndex = Math.floor(Math.random() * peers.length);
 
-            peerIndex++;
-            if (peerIndex === peers.length) {
-                peerIndex = 0;
+            for (let i = 0; i < countOffersToSend; i++) {
+                const toPeer = peers[peerIndex];
+
+                if (toPeer === peer) {
+                    i--; // do one more iteration
+                } else {
+                    sendOffer(offers[i], peer.id!, toPeer, infoHash);
+                }
+
+                peerIndex++;
+                if (peerIndex === peers.length) {
+                    peerIndex = 0;
+                }
             }
         }
 
