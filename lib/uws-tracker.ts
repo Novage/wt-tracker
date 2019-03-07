@@ -131,7 +131,7 @@ export class UWebSocketsTracker {
         }
     }
 
-    private onClose = () => (ws: WebSocket, code: number, message: ArrayBuffer) => {
+    private onClose = (ws: WebSocket, code: number, message: ArrayBuffer) => {
         this.webSocketsCount--;
         const peer: PeerContext | undefined = (ws as any).peer;
 
