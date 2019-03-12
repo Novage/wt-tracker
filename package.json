@@ -44,13 +44,14 @@
   },
   "dependencies": {
     "debug": "^4.1.1",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.5.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.7.0"
   },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/debug": "^4.1.2",
     "@types/mocha": "^5.2.6",
-    "@types/node": "^11.10.4",
+    "@types/node": "^11.11.1",
+    "@types/ws": "^6.0.1",
     "chai": "^4.2.0",
     "coveralls": "^3.0.3",
     "mocha": "^6.0.2",
@@ -58,6 +59,7 @@
     "rimraf": "^2.6.3",
     "tslint": "^5.13.1",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "^3.3.3333"
+    "typescript": "^3.3.3333",
+    "ws": "^6.2.0"
   }
 }
