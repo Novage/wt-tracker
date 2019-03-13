@@ -22,7 +22,7 @@ import { HttpResponse, HttpRequest } from "uWebSockets.js";
 // tslint:disable:no-console
 
 async function main() {
-    let settingsFileData;
+    let settingsFileData: any;
 
     if (process.argv[2]) {
         try {
@@ -42,7 +42,7 @@ async function main() {
         }
     }
 
-    let settings;
+    let settings: any;
     try {
         settings = (settingsFileData !== undefined) ? JSON.parse(settingsFileData.toString()) : {};
     } catch (e) {
@@ -68,6 +68,7 @@ async function main() {
                 torrentsCount: swarms.size,
                 peersCount: peersCount,
                 ...server.stats,
+                memory: process.memoryUsage(),
             }));
         })
         .get("/*", (response: HttpResponse, request: HttpRequest) => {
