@@ -79,7 +79,7 @@ export class FastTracker implements Tracker {
             swarm.removePeer(peer);
             if (swarm.peers.size === 0) {
                 if (debugEnabled) {
-                    debug("swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
+                    debug("disconnect peer: swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
                 }
                 this._swarms.delete(swarm.infoHash);
             } else if (swarmContext.completed) {
