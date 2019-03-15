@@ -1,20 +1,33 @@
 {
-  "server": {
-    "port": 8433,
-    "host": "0.0.0.0",
-    "key_file_name": "misc/key.pem",
-    "cert_file_name": "misc/cert.pem",
-    "passphrase": "1234",
-    "dh_params_file_name": "misc/params.dh",
-    "ssl_prefer_low_memory_usage": true
-  },
-
-  "websockets": {
-    "path": "/",
-    "maxPayloadLength": 65536,
-    "idleTimeout": 240,
-    "compression": 1
-  },
+  "servers": [{
+      "server": {
+        "port": 8000,
+        "host": "0.0.0.0"
+      },
+      "websockets": {
+        "path": "/",
+        "maxPayloadLength": 65536,
+        "idleTimeout": 240,
+        "compression": 1
+      }
+    }, {
+      "server": {
+        "port": 8433,
+        "host": "0.0.0.0",
+        "key_file_name": "misc/key.pem",
+        "cert_file_name": "misc/cert.pem",
+        "passphrase": "1234",
+        "dh_params_file_name": "misc/params.dh",
+        "ssl_prefer_low_memory_usage": true
+      },
+      "websockets": {
+        "path": "/",
+        "maxPayloadLength": 65536,
+        "idleTimeout": 240,
+        "compression": 1
+      }
+    }
+  ],
 
   "tracker": {
     "maxOffers": 20,
