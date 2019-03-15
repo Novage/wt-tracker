@@ -104,7 +104,7 @@ export class UWebSocketsTracker {
             return;
         }
 
-        let peer: PeerContext | undefined = (ws as any).peer;
+        let peer: PeerContext | undefined = ws.peer;
 
         if (debugMessagesEnabled) {
             debugMessages("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
@@ -119,7 +119,7 @@ export class UWebSocketsTracker {
                     }
                 },
             };
-            (ws as any).peer = peer;
+            ws.peer = peer;
         }
 
         try {
@@ -137,10 +137,10 @@ export class UWebSocketsTracker {
 
     private onClose = (ws: WebSocket, code: number, message: ArrayBuffer) => {
         this.webSocketsCount--;
-        const peer: PeerContext | undefined = (ws as any).peer;
+        const peer: PeerContext | undefined = ws.peer;
 
         if (peer !== undefined) {
-            delete (ws as any).peer;
+            delete ws.peer;
             this.tracker.disconnectPeer(peer);
         }
 
