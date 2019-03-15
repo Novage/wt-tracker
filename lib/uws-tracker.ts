@@ -105,21 +105,13 @@ export class UWebSocketsTracker {
         }
 
         let peer: PeerContext | undefined = ws.peer;
-
-        if (debugMessagesEnabled) {
-            debugMessages("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
+        if (peer === undefined) {
+            peer = createPeer(ws);
+            ws.peer = peer;
         }
 
-        if (peer === undefined) {
-            peer = {
-                sendMessage: (jsonToSend: any) => {
-                    ws.send(JSON.stringify(jsonToSend), false, false);
-                    if (debugMessagesEnabled) {
-                        debugMessages("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", jsonToSend);
-                    }
-                },
-            };
-            ws.peer = peer;
+        if (debugMessagesEnabled) {
+            debugMessages("in", peer.id !== undefined ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
         }
 
         try {
@@ -146,4 +138,15 @@ export class UWebSocketsTracker {
 
         debugWebSockets("closed with code", code);
     }
+}
+
+function createPeer(ws: WebSocket): PeerContext {
+    return {
+        sendMessage: (json: any) => {
+            ws.send(JSON.stringify(json), false, false);
+            if (debugMessagesEnabled) {
+                debugMessages("out", ws.peer.id !== undefined ? Buffer.from(ws.peer.id).toString("hex") : "unknown peer", json);
+            }
+        },
+    };
 }
