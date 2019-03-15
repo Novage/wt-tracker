@@ -119,11 +119,10 @@ export class UWebSocketsTracker {
         } catch (e) {
             if (e instanceof TrackerError) {
                 debugWebSockets("failed to process message from the peer:", e);
+                ws.close();
             } else {
                 throw e;
             }
-            ws.close();
-            return;
         }
     }
 
