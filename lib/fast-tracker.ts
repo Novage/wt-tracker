@@ -16,11 +16,10 @@
 
 import { Tracker, PeerContext, TrackerError } from "./tracker";
 
-import * as DebugModule from "debug";
-import { ldebug as ldebugConstructor } from "./lambda-debug";
+import * as Debug from "debug";
 
-const debug = DebugModule("wt-tracker:fast-tracker");
-const ldebug = ldebugConstructor(debug);
+const debug = Debug("wt-tracker:fast-tracker");
+const debugEnabled = debug.enabled;
 
 export class FastTracker implements Tracker {
     private _swarms = new Map<string, Swarm>();
@@ -71,13 +70,17 @@ export class FastTracker implements Tracker {
             return;
         }
 
-        ldebug(() => ["disconnect peer:", Buffer.from(peerId).toString("hex")]);
+        if (debugEnabled) {
+            debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
+        }
 
         for (const swarmContext of (peer as InternalPeerContext).swarms!) {
             const swarm = swarmContext.swarm;
             swarm.removePeer(peer);
             if (swarm.peers.size === 0) {
-                ldebug(() => ["swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex")]);
+                if (debugEnabled) {
+                    debug("swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
+                }
                 this._swarms.delete(swarm.infoHash);
             } else if (swarmContext.completed) {
                 swarm.completedCount--;
@@ -139,12 +142,16 @@ export class FastTracker implements Tracker {
                 throw new TrackerError("announce: info_hash field is missing or wrong");
             }
 
-            ldebug(() => ["announce: swarm created:", Buffer.from(infoHash).toString("hex")]);
+            if (debugEnabled) {
+                debug("announce: swarm created:", Buffer.from(infoHash).toString("hex"));
+            }
             swarm = new Swarm(infoHash);
             this._swarms.set(infoHash, swarm);
         }
 
-        ldebug(() => ["announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex")]);
+        if (debugEnabled) {
+            debug("announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex"));
+        }
 
         const previousPeer = swarm.peers.get(peer.id!);
         if (previousPeer !== undefined) {
@@ -233,7 +240,9 @@ export class FastTracker implements Tracker {
         delete json.to_peer_id;
         toPeer.sendMessage(json);
 
-        ldebug(() => ["answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex")]);
+        if (debugEnabled) {
+            debug("answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex"));
+        }
     }
 
     private processStop(json: any, peer: InternalPeerContext) {
@@ -255,10 +264,14 @@ export class FastTracker implements Tracker {
             return;
         }
 
-        ldebug(() => ["stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex")]);
+        if (debugEnabled) {
+            debug("stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex"));
+        }
 
         if (swarm.peers.size === 0) {
-            ldebug(() => ["stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex")]);
+            if (debugEnabled) {
+                debug("stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex"));
+            }
             this._swarms.delete(infoHash);
         }
     }

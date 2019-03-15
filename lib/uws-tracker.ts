@@ -19,10 +19,10 @@ import { Tracker, PeerContext, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
 
 import * as Debug from "debug";
-import { ldebug } from "./lambda-debug";
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
-const ldebugMessages = ldebug(Debug("wt-tracker:uws-tracker-messages"));
+const debugMessages = Debug("wt-tracker:uws-tracker-messages");
+const debugMessagesEnabled = debugMessages.enabled;
 const decoder = new StringDecoder();
 
 export class UWebSocketsTracker {
@@ -106,13 +106,17 @@ export class UWebSocketsTracker {
 
         let peer: PeerContext | undefined = (ws as any).peer;
 
-        ldebugMessages(() => ["in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json]);
+        if (debugMessagesEnabled) {
+            debugMessages("in", (peer && peer.id) ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
+        }
 
         if (peer === undefined) {
             peer = {
                 sendMessage: (jsonToSend: any) => {
                     ws.send(JSON.stringify(jsonToSend), false, false);
-                    ldebugMessages(() => ["out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", jsonToSend]);
+                    if (debugMessagesEnabled) {
+                        debugMessages("out", peer!.id ? Buffer.from(peer!.id).toString("hex") : "unknown peer", jsonToSend);
+                    }
                 },
             };
             (ws as any).peer = peer;
