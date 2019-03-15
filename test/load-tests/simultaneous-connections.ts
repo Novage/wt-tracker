@@ -39,6 +39,10 @@ const connectPromises = new Array<Promise<void>>();
 
 console.log("creating", peersCount, "connections");
 
+async function timeout(milliseconds: number) {
+    return new Promise<void>(resolve => setTimeout(resolve, milliseconds));
+}
+
 // tslint:disable-next-line:cognitive-complexity
 async function main() {
     try {
@@ -91,6 +95,8 @@ async function main() {
                 webSocket.on("close", () => reject(new Error("Socket closed")));
                 webSocket.on("error", e => reject(new Error(`Socket closed ${e}`)));
             }));
+
+            await timeout(10);
         }
     } catch (e) {
         console.log("faied to create WebSocket connections", e);
