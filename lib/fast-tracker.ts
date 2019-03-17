@@ -129,7 +129,7 @@ export class FastTracker implements Tracker {
             info_hash: infoHash,
             complete: swarm.completedCount,
             incomplete: swarm.peers.size - swarm.completedCount,
-        });
+        }, peer);
 
         this.sendOffersToPeers(json, swarmPeers, peer, infoHash);
     }
@@ -238,7 +238,7 @@ export class FastTracker implements Tracker {
         }
 
         delete json.to_peer_id;
-        toPeer.sendMessage(json);
+        toPeer.sendMessage(json, toPeer);
 
         if (debugEnabled) {
             debug("answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex"));
@@ -325,7 +325,7 @@ export class FastTracker implements Tracker {
         peer.sendMessage({
             action: "scrape",
             files: files,
-        });
+        }, peer);
     }
 }
 
@@ -394,7 +394,7 @@ function sendOffer(offerItem: {offer?: { sdp?: string }, offer_id?: string } | n
             type: "offer",
             sdp: offer.sdp, // offer.sdp is not validated to be a string
         },
-    });
+    }, toPeer);
 }
 
 function removePeerFromSwarm(peer: InternalPeerContext, infoHash: string): Swarm | undefined {

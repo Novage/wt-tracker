@@ -15,7 +15,7 @@
  */
 
 import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
-import { Tracker, PeerContext, TrackerError } from "./tracker";
+import { Tracker, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
 
 import * as Debug from "debug";
@@ -104,18 +104,16 @@ export class UWebSocketsTracker {
             return;
         }
 
-        let peer: PeerContext | undefined = ws.peer;
-        if (peer === undefined) {
-            peer = createPeer(ws);
-            ws.peer = peer;
+        if (ws.sendMessage === undefined) {
+            ws.sendMessage = sendMessage;
         }
 
         if (debugMessagesEnabled) {
-            debugMessages("in", peer.id !== undefined ? Buffer.from(peer.id).toString("hex") : "unknown peer", json);
+            debugMessages("in", ws.id !== undefined ? Buffer.from(ws.id).toString("hex") : "unknown peer", json);
         }
 
         try {
-            this.tracker.processMessage(json, peer);
+            this.tracker.processMessage(json, ws as any);
         } catch (e) {
             if (e instanceof TrackerError) {
                 debugWebSockets("failed to process message from the peer:", e);
@@ -128,24 +126,20 @@ export class UWebSocketsTracker {
 
     private onClose = (ws: WebSocket, code: number, message: ArrayBuffer) => {
         this.webSocketsCount--;
-        const peer: PeerContext | undefined = ws.peer;
 
-        if (peer !== undefined) {
-            delete ws.peer;
-            this.tracker.disconnectPeer(peer);
+        if (ws.sendMessage !== undefined) {
+            this.tracker.disconnectPeer(ws as any);
+            delete ws.sendMessage;
+            delete ws.id;
         }
 
         debugWebSockets("closed with code", code);
     }
 }
 
-function createPeer(ws: WebSocket): PeerContext {
-    return {
-        sendMessage: (json: any) => {
-            ws.send(JSON.stringify(json), false, false);
-            if (debugMessagesEnabled) {
-                debugMessages("out", ws.peer.id !== undefined ? Buffer.from(ws.peer.id).toString("hex") : "unknown peer", json);
-            }
-        },
-    };
+function sendMessage(json: any, ws: WebSocket) {
+    ws.send(JSON.stringify(json), false, false);
+    if (debugMessagesEnabled) {
+        debugMessages("out", ws.id !== undefined ? Buffer.from(ws.id).toString("hex") : "unknown peer", json);
+    }
 }
