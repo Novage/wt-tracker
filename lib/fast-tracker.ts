@@ -226,11 +226,17 @@ export class FastTracker implements Tracker {
         toPeer.sendMessage(json, toPeer);
 
         if (debugEnabled) {
-            debug("answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex"));
+            debug("answer: from peer",
+                    peer.id === undefined ? "unkown peer" : Buffer.from(peer.id).toString("hex"),
+                    "to peer", Buffer.from(toPeerId).toString("hex"));
         }
     }
 
     private processStop(json: any, peer: PeerContext) {
+        if (peer.id === undefined) {
+            return;
+        }
+
         const peerId: string | undefined = json.peer_id;
         if (peer.id !== peerId) {
             throw new TrackerError("stop event: different peer_id on the same connection");
