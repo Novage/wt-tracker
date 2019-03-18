@@ -129,8 +129,6 @@ export class UWebSocketsTracker {
 
         if (ws.sendMessage !== undefined) {
             this.tracker.disconnectPeer(ws as any);
-            delete ws.sendMessage;
-            delete ws.id;
         }
 
         debugWebSockets("closed with code", code);
