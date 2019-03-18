@@ -77,7 +77,14 @@ export class FastTracker implements Tracker {
         for (const swarm of this._swarms.values()) {
             if (!swarm.removePeer(peer)) {
                 continue;
-            } else if (swarm.peers.size === 0) {
+            }
+
+            if (debugEnabled) {
+                debug("disconnect peer: peer", Buffer.from(peerId).toString("hex"),
+                    "removed from swarm", Buffer.from(swarm.infoHash).toString("hex"));
+            }
+
+            if (swarm.peers.size === 0) {
                 if (debugEnabled) {
                     debug("disconnect peer: swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
                 }
@@ -243,7 +250,7 @@ export class FastTracker implements Tracker {
         }
 
         if (debugEnabled) {
-            debug("stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex"));
+            debug("stop event: peer", Buffer.from(peerId).toString("hex"), "removed from swarm", Buffer.from(infoHash).toString("hex"));
         }
 
         swarm.removePeer(peer);
