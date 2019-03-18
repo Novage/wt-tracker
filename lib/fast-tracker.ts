@@ -74,28 +74,23 @@ export class FastTracker implements Tracker {
             debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
         }
 
-        for (const swarmContext of (peer as InternalPeerContext).swarms!) {
-            const swarm = swarmContext.swarm;
-            swarm.removePeer(peer);
-            if (swarm.peers.size === 0) {
+        for (const swarm of this._swarms.values()) {
+            if (!swarm.removePeer(peer)) {
+                continue;
+            } else if (swarm.peers.size === 0) {
                 if (debugEnabled) {
                     debug("disconnect peer: swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
                 }
                 this._swarms.delete(swarm.infoHash);
-            } else if (swarmContext.completed) {
-                swarm.completedCount--;
             }
         }
 
         peer.id = undefined;
-        (peer as InternalPeerContext).swarms = undefined;
     }
 
-    private processAnnounce(json: any, peer: InternalPeerContext, completed: boolean = false) {
+    private processAnnounce(json: any, peer: PeerContext, completed: boolean = false) {
         const infoHash = json.info_hash;
         const peerId = json.peer_id;
-
-        let swarmContext: SwarmContext | undefined;
 
         if (peer.id === undefined) {
             if (typeof peerId !== "string") {
@@ -103,25 +98,11 @@ export class FastTracker implements Tracker {
             }
 
             peer.id = peerId;
-            peer.swarms = [];
-        } else {
-            if (peer.id !== peerId) {
-                throw new TrackerError("announce: different peer_id on the same connection");
-            }
-            swarmContext = peer.swarms!.find(s => s.swarm.infoHash === infoHash);
+        } else if (peer.id !== peerId) {
+            throw new TrackerError("announce: different peer_id on the same connection");
         }
 
-        if (swarmContext === undefined) {
-            swarmContext = this.addPeerToSwarm(peer, infoHash);
-        }
-
-        const swarm = swarmContext.swarm;
-        const swarmPeers = swarm.peersOrdered;
-
-        if (!swarmContext.completed && (completed || json.left === 0)) {
-            swarmContext.completed = true;
-            swarm.completedCount++;
-        }
+        const swarm = this.processPeerInSwarm(peer, infoHash, completed || json.left === 0);
 
         peer.sendMessage({
             action: "announce",
@@ -131,10 +112,10 @@ export class FastTracker implements Tracker {
             incomplete: swarm.peers.size - swarm.completedCount,
         }, peer);
 
-        this.sendOffersToPeers(json, swarmPeers, peer, infoHash);
+        this.sendOffersToPeers(json, swarm.peersOrdered, peer, infoHash);
     }
 
-    private addPeerToSwarm(peer: InternalPeerContext, infoHash: any) {
+    private processPeerInSwarm(peer: PeerContext, infoHash: any, completed: boolean) {
         let swarm = this._swarms.get(infoHash);
 
         if (swarm === undefined) {
@@ -145,28 +126,31 @@ export class FastTracker implements Tracker {
             if (debugEnabled) {
                 debug("announce: swarm created:", Buffer.from(infoHash).toString("hex"));
             }
+
             swarm = new Swarm(infoHash);
             this._swarms.set(infoHash, swarm);
+        }
+
+        const peerAlreadyInSwarm = swarm.peers.get(peer.id!);
+        if (peerAlreadyInSwarm === peer) {
+            if (completed) {
+                swarm.setCompleted(peer);
+            }
+            return swarm;
+        } else if (peerAlreadyInSwarm !== undefined) {
+            swarm.removePeer(peerAlreadyInSwarm);
         }
 
         if (debugEnabled) {
             debug("announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex"));
         }
 
-        const previousPeer = swarm.peers.get(peer.id!);
-        if (previousPeer !== undefined) {
-            removePeerFromSwarm(previousPeer, infoHash);
-        }
-
-        swarm.addPeer(peer);
-        const swarmContext = { completed: false, swarm: swarm };
-        peer.swarms!.push(swarmContext);
-
-        return swarmContext;
+        swarm.addPeer(peer, completed);
+        return swarm;
     }
 
     // tslint:disable-next-line:cognitive-complexity
-    private sendOffersToPeers(json: any, peers: ReadonlyArray<InternalPeerContext>, peer: InternalPeerContext, infoHash: string) {
+    private sendOffersToPeers(json: any, peers: ReadonlyArray<PeerContext>, peer: PeerContext, infoHash: string) {
         if (peers.length <= 1) {
             return;
         }
@@ -217,22 +201,16 @@ export class FastTracker implements Tracker {
         debug("announce: sent offers", countOffersToSend < 0 ? 0 : countOffersToSend);
     }
 
-    private processAnswer(json: any, peer: InternalPeerContext) {
+    private processAnswer(json: any, peer: PeerContext) {
         const infoHash: string = json.info_hash;
-        const peerSwarms = peer.swarms;
+        const swarm = this._swarms.get(infoHash);
 
-        if (peerSwarms === undefined) {
-            throw new TrackerError("answer: peer is not in the swarm");
-        }
-
-        const swarmContext = peerSwarms.find(s => s.swarm.infoHash === infoHash);
-
-        if (swarmContext === undefined) {
-            throw new TrackerError("answer: peer is not in the swarm");
+        if (swarm === undefined) {
+            throw new TrackerError("answer: no such swarm");
         }
 
         const toPeerId = json.to_peer_id;
-        const toPeer = swarmContext.swarm.peers.get(toPeerId);
+        const toPeer = swarm.peers.get(toPeerId);
         if (toPeer === undefined) {
             throw new TrackerError("answer: to_peer_id is not in the swarm");
         }
@@ -245,7 +223,7 @@ export class FastTracker implements Tracker {
         }
     }
 
-    private processStop(json: any, peer: InternalPeerContext) {
+    private processStop(json: any, peer: PeerContext) {
         const peerId: string | undefined = json.peer_id;
         if (peer.id !== peerId) {
             throw new TrackerError("stop event: different peer_id on the same connection");
@@ -257,7 +235,7 @@ export class FastTracker implements Tracker {
 
         const infoHash: string = json.info_hash;
 
-        const swarm = removePeerFromSwarm(peer, infoHash);
+        const swarm = this._swarms.get(infoHash);
 
         if (swarm === undefined) {
             debug("stop event: peer not in the swarm");
@@ -268,6 +246,7 @@ export class FastTracker implements Tracker {
             debug("stop event: peer", Buffer.from(peerId).toString("hex"), "remove from swarm", Buffer.from(infoHash).toString("hex"));
         }
 
+        swarm.removePeer(peer);
         if (swarm.peers.size === 0) {
             if (debugEnabled) {
                 debug("stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex"));
@@ -329,46 +308,62 @@ export class FastTracker implements Tracker {
     }
 }
 
-interface SwarmContext {
-    completed: boolean;
-    swarm: Swarm;
-}
-
-interface InternalPeerContext extends PeerContext {
-    swarms?: SwarmContext[];
-}
-
 // tslint:disable-next-line:max-classes-per-file
 class Swarm {
     public completedCount = 0;
 
-    private _peers = new Map<string, InternalPeerContext>();
-    private _peersOrdered: InternalPeerContext[] = [];
+    private _peers = new Map<string, PeerContext>();
+    private _peersOrdered: PeerContext[] = [];
+    private isPeerCompleted: boolean[] = [];
 
     constructor(readonly infoHash: string) {}
 
-    public addPeer(peer: InternalPeerContext) {
+    public addPeer(peer: PeerContext, completed: boolean) {
         const peerId = peer.id!;
         this._peersOrdered.push(peer);
+        this.isPeerCompleted.push(completed);
         this._peers.set(peerId, peer);
-    }
-
-    public removePeer(peer: InternalPeerContext) {
-        this._peers.delete(peer.id!);
-
-        // Delete peerId from array without calling splice
-        const index = this._peersOrdered.indexOf(peer);
-        const last = this._peersOrdered.pop()!;
-        if (index < this._peersOrdered.length) {
-            this._peersOrdered[index] = last;
+        if (completed) {
+            this.completedCount++;
         }
     }
 
-    public get peers(): ReadonlyMap<string, InternalPeerContext> {
+    public removePeer(peer: PeerContext) {
+        if (!this._peers.delete(peer.id!)) {
+            return false;
+        }
+
+        const index = this._peersOrdered.indexOf(peer);
+
+        if (this.isPeerCompleted[index]) {
+            this.completedCount--;
+        }
+
+        // Delete peerId from arrays without calling splice
+        const last = this._peersOrdered.pop()!;
+        const lastIsCompleted = this.isPeerCompleted.pop()!;
+        if (index < this._peersOrdered.length) {
+            this._peersOrdered[index] = last;
+            this.isPeerCompleted[index] = lastIsCompleted;
+        }
+
+        return true;
+    }
+
+    public setCompleted(peer: PeerContext) {
+        const index = this._peersOrdered.indexOf(peer);
+
+        if (!this.isPeerCompleted[index]) {
+            this.completedCount++;
+            this.isPeerCompleted[index] = true;
+        }
+    }
+
+    public get peers(): ReadonlyMap<string, PeerContext> {
         return this._peers;
     }
 
-    public get peersOrdered(): ReadonlyArray<InternalPeerContext> {
+    public get peersOrdered(): ReadonlyArray<PeerContext> {
         return this._peersOrdered;
     }
 }
@@ -395,29 +390,4 @@ function sendOffer(offerItem: {offer?: { sdp?: string }, offer_id?: string } | n
             sdp: offer.sdp, // offer.sdp is not validated to be a string
         },
     }, toPeer);
-}
-
-function removePeerFromSwarm(peer: InternalPeerContext, infoHash: string): Swarm | undefined {
-    const peerSwarms = peer.swarms!;
-    const swarmIndex = peerSwarms.findIndex(s => s.swarm.infoHash === infoHash);
-
-    if (swarmIndex === -1) {
-        return undefined;
-    }
-
-    const swarmContext = peerSwarms[swarmIndex];
-    const swarm = swarmContext.swarm;
-
-    swarm.removePeer(peer);
-    if (swarmContext.completed) {
-        swarm.completedCount--;
-    }
-
-    // Delete swarm from array without calling splice
-    const last = peerSwarms.pop()!;
-    if (swarmIndex < peerSwarms.length) {
-        peerSwarms[swarmIndex] = last;
-    }
-
-    return swarm;
 }
