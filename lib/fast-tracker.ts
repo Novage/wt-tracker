@@ -364,8 +364,6 @@ class Swarm {
             this._peersOrdered[index] = last;
             this.isPeerCompleted[index] = lastIsCompleted;
         }
-
-        return true;
     }
 
     public setCompleted(peer: PeerContext) {
