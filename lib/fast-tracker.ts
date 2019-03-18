@@ -143,6 +143,11 @@ export class FastTracker implements Tracker {
             if (completed) {
                 swarm.setCompleted(peer);
             }
+
+            if (debugEnabled) {
+                debug("announce: peer", Buffer.from(peer.id!).toString("hex"), " in swarm", Buffer.from(infoHash).toString("hex"));
+            }
+
             return swarm;
         } else if (peerAlreadyInSwarm !== undefined) {
             swarm.removePeer(peerAlreadyInSwarm);
