@@ -23,6 +23,7 @@ import { mock, instance, anything, verify, capture, resetCalls } from "ts-mockit
 // tslint:disable:no-use-of-empty-return-value
 // tslint:disable:no-unused-expression
 // tslint:disable:no-big-function
+// tslint:disable: no-shadowed-variable
 class PeerContextClass implements PeerContext {
     public id?: string;
     public sendMessage: (json: any) => void = () => {};
@@ -32,12 +33,8 @@ describe("announce", () => {
     it("should add peers to swarms on announce", () => {
 
         const tracker = new FastTracker();
-        const peers: PeerContext[] = [];
 
-        peers.push({
-            sendMessage: (json: any) => {},
-        });
-
+        const peer0 = new PeerContextClass();
         let announceMessage: any = {
             action: "announce",
             event: "started",
@@ -46,16 +43,13 @@ describe("announce", () => {
             offers: new Array<any>(),
             numwant: 100,
         };
+        tracker.processMessage(announceMessage, peer0);
 
-        tracker.processMessage(announceMessage, peers[0]);
         expect(tracker.swarms).to.have.all.keys("swarm1");
         expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peers[0]);
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
 
-        peers.push({
-            sendMessage: (json: any) => {},
-        });
-
+        const peer1 = new PeerContextClass();
         announceMessage = {
             action: "announce",
             info_hash: "swarm1",
@@ -63,12 +57,12 @@ describe("announce", () => {
             offers: new Array<any>(),
             numwant: 100,
         };
+        tracker.processMessage(announceMessage, peer1);
 
-        tracker.processMessage(announceMessage, peers[1]);
         expect(tracker.swarms).to.have.all.keys("swarm1");
         expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peers[0]);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peers[1]);
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
 
         announceMessage = {
             action: "announce",
@@ -78,17 +72,14 @@ describe("announce", () => {
             offers: new Array<any>(),
             numwant: 100,
         };
+        tracker.processMessage(announceMessage, peer1);
 
-        tracker.processMessage(announceMessage, peers[1]);
         expect(tracker.swarms).to.have.all.keys("swarm1");
         expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peers[0]);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peers[1]);
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
 
-        peers.push({
-            sendMessage: (json: any) => {},
-        });
-
+        const peer2 = new PeerContextClass();
         announceMessage = {
             action: "announce",
             event: "completed",
@@ -97,19 +88,16 @@ describe("announce", () => {
             offers: new Array<any>(),
             numwant: 100,
         };
+        tracker.processMessage(announceMessage, peer2);
 
-        tracker.processMessage(announceMessage, peers[2]);
         expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
         expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peers[0]);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peers[1]);
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
         expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0");
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peers[2]);
+        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
 
-        peers.push({
-            sendMessage: (json: any) => {},
-        });
-
+        const peer3 = new PeerContextClass();
         announceMessage = {
             action: "announce",
             event: "completed",
@@ -118,18 +106,39 @@ describe("announce", () => {
             offers: new Array<any>(),
             numwant: 100,
         };
+        tracker.processMessage(announceMessage, peer3);
 
-        tracker.processMessage(announceMessage, peers[3]);
         expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
         expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peers[0]);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peers[1]);
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
         expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0", "2_1");
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peers[2]);
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_1")).to.equal(peers[3]);
+        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
+        expect(tracker.swarms.get("swarm2")!.peers.get("2_1")).to.equal(peer3);
+
+        announceMessage = {
+            action: "announce",
+            event: "completed",
+            info_hash: "swarm2",
+            peer_id: "1",
+            offers: new Array<any>(),
+            numwant: 100,
+        };
+        tracker.processMessage(announceMessage, peer1);
+
+        expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
+        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
+        expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0", "2_1", "1");
+        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
+        expect(tracker.swarms.get("swarm2")!.peers.get("2_1")).to.equal(peer3);
+        expect(tracker.swarms.get("swarm2")!.peers.get("1")).to.equal(peer1);
+
     });
 
-    it("should send offers to peers in the swarm", () => {
+    it("should send offers to peers in a swarm", () => {
+
         const tracker = new FastTracker();
 
         const offers: any[] = [];
@@ -151,7 +160,6 @@ describe("announce", () => {
             offers: offers,
             numwant: offers.length,
         };
-
         tracker.processMessage(announceMessage, peer0);
 
         verify(mockedPeer0.sendMessage(anything())).once();
@@ -173,7 +181,6 @@ describe("announce", () => {
             offers: offers,
             numwant: offers.length,
         };
-
         tracker.processMessage(announceMessage, peer1);
 
         verify(mockedPeer1.sendMessage(anything())).once();
@@ -207,7 +214,6 @@ describe("announce", () => {
             offers: offers,
             numwant: offers.length,
         };
-
         tracker.processMessage(announceMessage, peer2);
 
         verify(mockedPeer2.sendMessage(anything())).once();
@@ -235,7 +241,6 @@ describe("announce", () => {
             offers: offers,
             numwant: offers.length,
         };
-
         tracker.processMessage(announceMessage, peer3);
 
         verify(mockedPeer3.sendMessage(anything())).once();
@@ -273,7 +278,6 @@ describe("announce", () => {
             offers: offers,
             numwant: 1,
         };
-
         tracker.processMessage(announceMessage, peer4);
 
         verify(mockedPeer4.sendMessage(anything())).once();
@@ -301,5 +305,161 @@ describe("announce", () => {
         expect(json.offer).to.exist;
         expect(json.offer.type).to.be.equal("offer");
         expect(json.offer.sdp).to.be.equal("x");
+
+        resetCalls(mockedPeer0);
+        resetCalls(mockedPeer1);
+        resetCalls(mockedPeer2);
+        resetCalls(mockedPeer3);
+        resetCalls(mockedPeer4);
+
+        announceMessage = {
+            action: "announce",
+            event: "completed",
+            info_hash: "swarm2",
+            peer_id: "1",
+            offers: offers,
+            numwant: offers.length,
+        };
+        tracker.processMessage(announceMessage, peer1);
+
+        verify(mockedPeer0.sendMessage(anything())).never();
+        verify(mockedPeer1.sendMessage(anything())).once();
+        verify(mockedPeer2.sendMessage(anything())).once();
+        verify(mockedPeer3.sendMessage(anything())).once();
+        verify(mockedPeer4.sendMessage(anything())).once();
+    });
+
+    it("should process answer messages", () => {
+
+        const tracker = new FastTracker();
+
+        const peer1 = {
+            sendMessage: (json: any) => {
+                if (!json.offer) {
+                    return;
+                }
+                const answerMessage = {
+                    action: "announce",
+                    info_hash: json.info_hash,
+                    peer_id: "1",
+                    to_peer_id: json.peer_id,
+                    answer: {
+                        type: "answer",
+                        sdp: "sdp1",
+                    },
+                    offer_id: json.offer_id,
+                };
+                tracker.processMessage(answerMessage, peer1);
+            },
+        };
+        let announceMessage: any = {
+            action: "announce",
+            event: "started",
+            info_hash: "swarm1",
+            peer_id: "1",
+        };
+        tracker.processMessage(announceMessage, peer1);
+
+        const peer2 = {
+            sendMessage: (json: any) => {
+                if (!json.offer) {
+                    return;
+                }
+                const answerMessage = {
+                    action: "announce",
+                    info_hash: json.info_hash,
+                    peer_id: "2",
+                    to_peer_id: json.peer_id,
+                    answer: {
+                        type: "answer",
+                        sdp: "sdp2",
+                    },
+                    offer_id: json.offer_id,
+                };
+                tracker.processMessage(answerMessage, peer2);
+            },
+        };
+        announceMessage = {
+            action: "announce",
+            event: "started",
+            info_hash: "swarm1",
+            peer_id: "2",
+        };
+        tracker.processMessage(announceMessage, peer2);
+
+        const peer3 = {
+            sendMessage: (json: any) => {
+                if (!json.offer) {
+                    return;
+                }
+                const answerMessage = {
+                    action: "announce",
+                    info_hash: json.info_hash,
+                    peer_id: "3",
+                    to_peer_id: json.peer_id,
+                    answer: {
+                        type: "answer",
+                        sdp: "sdp3",
+                    },
+                    offer_id: json.offer_id,
+                };
+                tracker.processMessage(answerMessage, peer3);
+            },
+        };
+        announceMessage = {
+            action: "announce",
+            event: "started",
+            info_hash: "swarm1",
+            peer_id: "3",
+        };
+        tracker.processMessage(announceMessage, peer3);
+
+        const mockedPeer0 = mock(PeerContextClass);
+        const peer0 = instance(mockedPeer0);
+        peer0.id = undefined;
+        announceMessage = {
+            action: "announce",
+            event: "started",
+            info_hash: "swarm1",
+            peer_id: "0",
+            offers: [{
+                offer: { sdp: "sdp01" },
+                offer_id: "1",
+            }, {
+                offer: { sdp: "sdp02" },
+                offer_id: "2",
+            }, {
+                offer: { sdp: "sdp03" },
+                offer_id: "3",
+            }],
+            numwant: 100,
+        };
+        tracker.processMessage(announceMessage, peer0);
+
+        verify(mockedPeer0.sendMessage(anything())).times(4);
+
+        let [json] = capture(mockedPeer0.sendMessage).byCallIndex(1);
+        expect(json.action).to.be.equal("announce");
+        expect(json.info_hash).to.be.equal("swarm1");
+        expect(json.peer_id).to.be.equal("1");
+        expect(json.offer_id).to.be.equal("1");
+        expect(json.answer.type).to.be.equal("answer");
+        expect(json.answer.sdp).to.be.equal("sdp1");
+
+        [json] = capture(mockedPeer0.sendMessage).byCallIndex(2);
+        expect(json.action).to.be.equal("announce");
+        expect(json.info_hash).to.be.equal("swarm1");
+        expect(json.peer_id).to.be.equal("2");
+        expect(json.offer_id).to.be.equal("2");
+        expect(json.answer.type).to.be.equal("answer");
+        expect(json.answer.sdp).to.be.equal("sdp2");
+
+        [json] = capture(mockedPeer0.sendMessage).byCallIndex(3);
+        expect(json.action).to.be.equal("announce");
+        expect(json.info_hash).to.be.equal("swarm1");
+        expect(json.peer_id).to.be.equal("3");
+        expect(json.offer_id).to.be.equal("3");
+        expect(json.answer.type).to.be.equal("answer");
+        expect(json.answer.sdp).to.be.equal("sdp3");
     });
 });
