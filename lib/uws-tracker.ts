@@ -17,12 +17,17 @@
 import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
 import { Tracker, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
-
 import * as Debug from "debug";
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
+const debugWebSocketsEnabled = debugWebSockets.enabled;
+
 const debugMessages = Debug("wt-tracker:uws-tracker-messages");
 const debugMessagesEnabled = debugMessages.enabled;
+
+const debugRequests = Debug("wt-tracker:uws-tracker-requests");
+const debugRequestsEnabled = debugRequests.enabled;
+
 const decoder = new StringDecoder();
 
 export class UWebSocketsTracker {
@@ -82,10 +87,19 @@ export class UWebSocketsTracker {
             idleTimeout: this.settings.websockets.idleTimeout,
             open: (ws: WebSocket, request: HttpRequest) => {
                 this.webSocketsCount++;
-                debugWebSockets("connected via URL", request.getUrl());
+                if (debugRequestsEnabled) {
+                    debugRequests(this.settings.server.host, this.settings.server.port,
+                        "ws-open url:", request.getUrl(), "query:", request.getQuery(),
+                        "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
+                }
+                if (debugWebSocketsEnabled) {
+                    debugWebSockets("connected via URL", request.getUrl());
+                }
             },
             drain: (ws: WebSocket) => {
-                debugWebSockets("drain", ws.getBufferedAmount());
+                if (debugWebSocketsEnabled) {
+                    debugWebSockets("drain", ws.getBufferedAmount());
+                }
             },
             message: this.onMessage,
             close: this.onClose,

@@ -19,6 +19,10 @@ import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import { Tracker } from "./tracker";
+import * as Debug from "debug";
+
+const debugRequests = Debug("wt-tracker:uws-tracker-requests");
+const debugRequestsEnabled = debugRequests.enabled;
 
 // tslint:disable:no-console
 
@@ -98,7 +102,12 @@ async function runServers(serversSettings: any[], tracker: Tracker) {
                 memory: process.memoryUsage(),
             }));
         })
-        .get("/*", (response: HttpResponse, request: HttpRequest) => {
+        .any("/*", (response: HttpResponse, request: HttpRequest) => {
+            if (debugRequestsEnabled) {
+                debugRequests(server.settings.server.host, server.settings.server.port,
+                    "request method:", request.getMethod(), "url:", request.getUrl(),
+                    "query:", request.getQuery());
+            }
             const status = "404 Not Found";
             response.writeStatus(status).end(status);
         });
