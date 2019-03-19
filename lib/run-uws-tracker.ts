@@ -18,11 +18,12 @@ import { UWebSocketsTracker } from "./uws-tracker";
 import { FastTracker } from "./fast-tracker";
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
+import { Tracker } from "./tracker";
 
 // tslint:disable:no-console
 
 async function main() {
-    let settingsFileData;
+    let settingsFileData: any;
 
     if (process.argv[2]) {
         try {
@@ -42,7 +43,7 @@ async function main() {
         }
     }
 
-    let settings;
+    let settings: any;
     try {
         settings = (settingsFileData !== undefined) ? JSON.parse(settingsFileData.toString()) : {};
     } catch (e) {
@@ -50,10 +51,27 @@ async function main() {
         return;
     }
 
+    const serversSettings = (settings.servers === undefined ? [undefined] : settings.servers);
+
+    if (!(serversSettings instanceof Array)) {
+        console.error("failed to parse JSON configuration file: 'servers' property should be an array");
+        return;
+    }
+
     const tracker = new FastTracker(settings.tracker);
 
     try {
-        const server = new UWebSocketsTracker(tracker, settings);
+        await runServers(serversSettings, tracker);
+    } catch (e) {
+        console.error("failed to start the web server:", e.toString());
+    }
+}
+
+async function runServers(serversSettings: any[], tracker: Tracker) {
+    const servers: UWebSocketsTracker[] = [];
+
+    for (const serverSettings of serversSettings) {
+        const server = new UWebSocketsTracker(tracker, serverSettings);
 
         server.app
         .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
@@ -63,11 +81,21 @@ async function main() {
                 peersCount += swarm.peers.size;
             }
 
+            const serversStats = new Array<{ server: string, webSocketsCount: number }>();
+            for (const serverForStats of servers) {
+                const settings = serverForStats.settings;
+                serversStats.push({
+                    server: `${settings.server.host}:${settings.server.port}`,
+                    webSocketsCount: serverForStats.stats.webSocketsCount,
+                });
+            }
+
             response.writeHeader("Content-Type", "application/json")
             .end(JSON.stringify({
                 torrentsCount: swarms.size,
                 peersCount: peersCount,
-                ...server.stats,
+                servers: serversStats,
+                memory: process.memoryUsage(),
             }));
         })
         .get("/*", (response: HttpResponse, request: HttpRequest) => {
@@ -75,10 +103,9 @@ async function main() {
             response.writeStatus(status).end(status);
         });
 
+        servers.push(server);
         await server.run();
         console.info(`listening ${server.settings.server.host}:${server.settings.server.port}`);
-    } catch (e) {
-        console.error("failed to start the web server:", e.toString());
     }
 }
 

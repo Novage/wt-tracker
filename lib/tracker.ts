@@ -16,7 +16,7 @@
 
 export interface PeerContext {
     id?: string;
-    sendMessage: (json: any) => void;
+    sendMessage: (json: any, peer: PeerContext) => void;
 }
 
 export interface Tracker {

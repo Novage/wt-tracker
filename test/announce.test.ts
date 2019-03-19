@@ -26,7 +26,7 @@ import { mock, instance, anything, verify, capture, resetCalls } from "ts-mockit
 // tslint:disable: no-shadowed-variable
 class PeerContextClass implements PeerContext {
     public id?: string;
-    public sendMessage: (json: any) => void = () => {};
+    public sendMessage: (json: any, peer: PeerContext) => void = () => {};
 }
 
 describe("announce", () => {
@@ -162,7 +162,7 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer0);
 
-        verify(mockedPeer0.sendMessage(anything())).once();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).once();
         let [json] = capture(mockedPeer0.sendMessage).first();
         expect(json.info_hash).to.be.equal("swarm1");
         expect(json.complete).to.be.equal(0);
@@ -183,14 +183,14 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer1);
 
-        verify(mockedPeer1.sendMessage(anything())).once();
+        verify(mockedPeer1.sendMessage(anything(), peer1)).once();
         [json] = capture(mockedPeer1.sendMessage).first();
         expect(json.action).to.be.equal("announce");
         expect(json.info_hash).to.be.equal("swarm1");
         expect(json.complete).to.be.equal(1);
         expect(json.incomplete).to.be.equal(1);
 
-        verify(mockedPeer0.sendMessage(anything())).once();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).once();
         [json] = capture(mockedPeer0.sendMessage).first();
         expect(json.action).to.be.equal("announce");
         expect(json.info_hash).to.be.equal("swarm1");
@@ -216,15 +216,15 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer2);
 
-        verify(mockedPeer2.sendMessage(anything())).once();
+        verify(mockedPeer2.sendMessage(anything(), peer2)).once();
         [json] = capture(mockedPeer2.sendMessage).first();
         expect(json.action).to.be.equal("announce");
         expect(json.info_hash).to.be.equal("swarm2");
         expect(json.complete).to.be.equal(0);
         expect(json.incomplete).to.be.equal(1);
 
-        verify(mockedPeer0.sendMessage(anything())).never();
-        verify(mockedPeer1.sendMessage(anything())).never();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).never();
+        verify(mockedPeer1.sendMessage(anything(), peer1)).never();
 
         resetCalls(mockedPeer0);
         resetCalls(mockedPeer1);
@@ -243,16 +243,16 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer3);
 
-        verify(mockedPeer3.sendMessage(anything())).once();
+        verify(mockedPeer3.sendMessage(anything(), peer3)).once();
         const [json3] = capture(mockedPeer3.sendMessage).first();
         expect(json.action).to.be.equal("announce");
         expect(json3.info_hash).to.be.equal("swarm2");
         expect(json3.complete).to.be.equal(1);
         expect(json3.incomplete).to.be.equal(1);
 
-        verify(mockedPeer0.sendMessage(anything())).never();
-        verify(mockedPeer1.sendMessage(anything())).never();
-        verify(mockedPeer2.sendMessage(anything())).once();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).never();
+        verify(mockedPeer1.sendMessage(anything(), peer1)).never();
+        verify(mockedPeer2.sendMessage(anything(), peer2)).once();
         [json] = capture(mockedPeer2.sendMessage).first();
         expect(json.action).to.be.equal("announce");
         expect(json.info_hash).to.be.equal("swarm2");
@@ -280,22 +280,22 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer4);
 
-        verify(mockedPeer4.sendMessage(anything())).once();
+        verify(mockedPeer4.sendMessage(anything(), peer4)).once();
         [json] = capture(mockedPeer4.sendMessage).first();
         expect(json.info_hash).to.be.equal("swarm2");
         expect(json.complete).to.be.equal(2);
         expect(json.incomplete).to.be.equal(1);
 
-        verify(mockedPeer0.sendMessage(anything())).never();
-        verify(mockedPeer1.sendMessage(anything())).never();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).never();
+        verify(mockedPeer1.sendMessage(anything(), peer1)).never();
 
         try {
-            verify(mockedPeer2.sendMessage(anything())).once();
-            verify(mockedPeer3.sendMessage(anything())).never();
+            verify(mockedPeer2.sendMessage(anything(), peer2)).once();
+            verify(mockedPeer3.sendMessage(anything(), peer3)).never();
             [json] = capture(mockedPeer2.sendMessage).first();
         } catch {
-            verify(mockedPeer3.sendMessage(anything())).once();
-            verify(mockedPeer2.sendMessage(anything())).never();
+            verify(mockedPeer3.sendMessage(anything(), peer3)).once();
+            verify(mockedPeer2.sendMessage(anything(), peer2)).never();
             [json] = capture(mockedPeer3.sendMessage).first();
         }
         expect(json.action).to.be.equal("announce");
@@ -322,11 +322,11 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer1);
 
-        verify(mockedPeer0.sendMessage(anything())).never();
-        verify(mockedPeer1.sendMessage(anything())).once();
-        verify(mockedPeer2.sendMessage(anything())).once();
-        verify(mockedPeer3.sendMessage(anything())).once();
-        verify(mockedPeer4.sendMessage(anything())).once();
+        verify(mockedPeer0.sendMessage(anything(), peer0)).never();
+        verify(mockedPeer1.sendMessage(anything(), peer1)).once();
+        verify(mockedPeer2.sendMessage(anything(), peer2)).once();
+        verify(mockedPeer3.sendMessage(anything(), peer3)).once();
+        verify(mockedPeer4.sendMessage(anything(), peer4)).once();
     });
 
     it("should process answer messages", () => {
@@ -436,7 +436,7 @@ describe("announce", () => {
         };
         tracker.processMessage(announceMessage, peer0);
 
-        verify(mockedPeer0.sendMessage(anything())).times(4);
+        verify(mockedPeer0.sendMessage(anything(), peer0)).times(4);
 
         let [json] = capture(mockedPeer0.sendMessage).byCallIndex(1);
         expect(json.action).to.be.equal("announce");
