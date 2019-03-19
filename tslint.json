@@ -10,7 +10,7 @@
     "max-line-length": [true, 150],
     "no-empty": [true, "allow-empty-functions"],
     "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"],
-    "no-implicit-dependencies": [true, ["chai", "ws"]]
+    "no-implicit-dependencies": [true, ["chai", "ws", "ts-mockito"]]
   },
   "defaultSeverity": "error",
   "extends": ["tslint:latest", "tslint-sonarts"]

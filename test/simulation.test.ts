@@ -18,6 +18,8 @@ import { FastTracker } from "../lib/fast-tracker";
 import { PeerContext } from "../lib/tracker";
 import { expect } from "chai";
 
+// tslint:disable:no-unused-expression
+
 describe("simulation", () => {
     it("should pass random simulations", () => {
         const simulationsCount = 1000;
@@ -94,11 +96,11 @@ describe("simulation", () => {
         }
 
         for (const [swarmId, swarm] of tracker.swarms) {
-            expect(swarm.peers.size > 0, "the swarm can't be empty");
+            expect(swarm.peers).to.be.not.empty;
             for (const peer of swarm.peers.values()) {
-                const peerData = peersData.find(p => p.peerId === peer.id);
-                expect(peerData === undefined, "the peer is missing");
-                expect(peerData!.infoHash === swarmId, "the peer is in a wrong swarm");
+                const peerData = peersData[peers.indexOf(peer)];
+                expect(peerData).to.exist;
+                expect(peerData.infoHash).to.be.equal(swarmId);
             }
         }
     });
