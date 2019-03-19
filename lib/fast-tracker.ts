@@ -21,10 +21,6 @@ import * as Debug from "debug";
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-interface InternalPeerContext extends PeerContext {
-    swarms?: {[infoHash: string]: Swarm | undefined};
-}
-
 export class FastTracker implements Tracker {
     private _swarms = new Map<string, Swarm>();
 
@@ -68,7 +64,7 @@ export class FastTracker implements Tracker {
         }
     }
 
-    public disconnectPeer(peer: InternalPeerContext) {
+    public disconnectPeer(peer: PeerContext) {
         const peerId = peer.id;
         if (peerId === undefined) {
             return;
@@ -79,10 +75,15 @@ export class FastTracker implements Tracker {
         }
 
         // tslint:disable-next-line:forin
-        for (const infoHash in peer.swarms) {
-            const swarm = peer.swarms[infoHash]!;
+        for (const infoHash in peer) {
+            const swarm: any = (peer as any)[infoHash];
+
+            if (!(swarm instanceof Swarm)) {
+                continue;
+            }
 
             swarm.removePeer(peer);
+            delete (peer as any)[infoHash];
 
             if (debugEnabled) {
                 debug("disconnect peer: peer", Buffer.from(peerId).toString("hex"), "removed from swarm", Buffer.from(infoHash).toString("hex"));
@@ -97,10 +98,9 @@ export class FastTracker implements Tracker {
         }
 
         peer.id = undefined;
-        peer.swarms = undefined;
     }
 
-    private processAnnounce(json: any, peer: InternalPeerContext, completed: boolean = false) {
+    private processAnnounce(json: any, peer: PeerContext, completed: boolean = false) {
         const infoHash = json.info_hash;
         const peerId = json.peer_id;
 
@@ -110,17 +110,16 @@ export class FastTracker implements Tracker {
             }
 
             peer.id = peerId;
-            peer.swarms = {};
         } else if (peer.id !== peerId) {
             throw new TrackerError("announce: different peer_id on the same connection");
         }
 
         const isPeerCompleted = (completed || json.left === 0);
-        let swarm = peer.swarms![infoHash];
+        let swarm = (peer as any)[infoHash];
 
         if (swarm === undefined) {
             swarm = this.addPeerToSwarm(peer, infoHash, isPeerCompleted);
-        } else {
+        } else if (swarm instanceof Swarm) {
             if (debugEnabled) {
                 debug("announce: peer", Buffer.from(peer.id).toString("hex"), "in swarm", Buffer.from(infoHash).toString("hex"));
             }
@@ -128,6 +127,8 @@ export class FastTracker implements Tracker {
             if (isPeerCompleted) {
                 swarm.setCompleted(peer);
             }
+        } else {
+            throw new TrackerError("announce: illegal info_hash field");
         }
 
         peer.sendMessage({
@@ -141,7 +142,7 @@ export class FastTracker implements Tracker {
         this.sendOffersToPeers(json, swarm.peersOrdered, peer, infoHash);
     }
 
-    private addPeerToSwarm(peer: InternalPeerContext, infoHash: any, completed: boolean): Swarm {
+    private addPeerToSwarm(peer: PeerContext, infoHash: any, completed: boolean): Swarm {
         let swarm = this._swarms.get(infoHash);
 
         if (swarm === undefined) {
@@ -160,7 +161,7 @@ export class FastTracker implements Tracker {
         const peerAlreadyInSwarm = swarm.peers.get(peer.id!);
         if (peerAlreadyInSwarm !== undefined) {
             swarm.removePeer(peerAlreadyInSwarm);
-            delete peerAlreadyInSwarm.swarms![infoHash];
+            delete (peerAlreadyInSwarm as any)[infoHash];
         }
 
         if (debugEnabled) {
@@ -168,12 +169,12 @@ export class FastTracker implements Tracker {
         }
 
         swarm.addPeer(peer, completed);
-        peer.swarms![infoHash] = swarm;
+        (peer as any)[infoHash] = swarm;
         return swarm;
     }
 
     // tslint:disable-next-line:cognitive-complexity
-    private sendOffersToPeers(json: any, peers: ReadonlyArray<InternalPeerContext>, peer: PeerContext, infoHash: string) {
+    private sendOffersToPeers(json: any, peers: ReadonlyArray<PeerContext>, peer: PeerContext, infoHash: string) {
         if (peers.length <= 1) {
             return;
         }
@@ -224,17 +225,12 @@ export class FastTracker implements Tracker {
         debug("announce: sent offers", countOffersToSend < 0 ? 0 : countOffersToSend);
     }
 
-    private processAnswer(json: any, peer: InternalPeerContext) {
+    private processAnswer(json: any, peer: PeerContext) {
         const infoHash: string = json.info_hash;
-        const swarms = peer.swarms;
 
-        if (swarms === undefined) {
-            throw new TrackerError("answer: peer is not in the swarm");
-        }
+        const swarm = (peer as any)[infoHash];
 
-        const swarm = swarms[infoHash];
-
-        if (swarm === undefined) {
+        if (!(swarm instanceof Swarm)) {
             throw new TrackerError("answer: peer is not in the swarm");
         }
 
@@ -253,16 +249,11 @@ export class FastTracker implements Tracker {
         }
     }
 
-    private processStop(json: any, peer: InternalPeerContext) {
-        const swarms = peer.swarms!;
-        if (swarms === undefined) {
-            return;
-        }
-
+    private processStop(json: any, peer: PeerContext) {
         const infoHash: string = json.info_hash;
-        const swarm = swarms[infoHash];
+        const swarm = (peer as any)[infoHash] as Swarm | undefined;
 
-        if (swarm === undefined) {
+        if (!(swarm instanceof Swarm)) {
             debug("stop event: peer not in the swarm");
             return;
         }
@@ -272,7 +263,7 @@ export class FastTracker implements Tracker {
         }
 
         swarm.removePeer(peer);
-        delete swarms[infoHash];
+        delete (peer as any)[infoHash];
 
         if (swarm.peers.size === 0) {
             if (debugEnabled) {
@@ -339,13 +330,13 @@ export class FastTracker implements Tracker {
 class Swarm {
     public completedCount = 0;
 
-    private _peers = new Map<string, InternalPeerContext>();
-    private _peersOrdered: InternalPeerContext[] = [];
+    private _peers = new Map<string, PeerContext>();
+    private _peersOrdered: PeerContext[] = [];
     private isPeerCompleted: boolean[] = [];
 
     constructor(readonly infoHash: string) {}
 
-    public addPeer(peer: InternalPeerContext, completed: boolean) {
+    public addPeer(peer: PeerContext, completed: boolean) {
         const peerId = peer.id!;
         this._peersOrdered.push(peer);
         this.isPeerCompleted.push(completed);
@@ -355,7 +346,7 @@ class Swarm {
         }
     }
 
-    public removePeer(peer: InternalPeerContext) {
+    public removePeer(peer: PeerContext) {
         this._peers.delete(peer.id!);
 
         const index = this._peersOrdered.indexOf(peer);
@@ -373,7 +364,7 @@ class Swarm {
         }
     }
 
-    public setCompleted(peer: InternalPeerContext) {
+    public setCompleted(peer: PeerContext) {
         const index = this._peersOrdered.indexOf(peer);
 
         if (!this.isPeerCompleted[index]) {
@@ -382,11 +373,11 @@ class Swarm {
         }
     }
 
-    public get peers(): ReadonlyMap<string, InternalPeerContext> {
+    public get peers(): ReadonlyMap<string, PeerContext> {
         return this._peers;
     }
 
-    public get peersOrdered(): ReadonlyArray<InternalPeerContext> {
+    public get peersOrdered(): ReadonlyArray<PeerContext> {
         return this._peersOrdered;
     }
 }

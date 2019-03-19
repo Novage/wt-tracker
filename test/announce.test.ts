@@ -26,6 +26,9 @@ import { mock, instance, anything, verify, capture, resetCalls } from "ts-mockit
 // tslint:disable: no-shadowed-variable
 class PeerContextClass implements PeerContext {
     public id?: string;
+    public swarm1?: any;
+    public swarm2?: any;
+    public swarm3?: any;
     public sendMessage: (json: any, peer: PeerContext) => void = () => {};
 }
 
@@ -152,6 +155,7 @@ describe("announce", () => {
         const mockedPeer0 = mock(PeerContextClass);
         const peer0 = instance(mockedPeer0);
         peer0.id = undefined;
+        peer0.swarm1 = undefined;
         let announceMessage: any = {
             action: "announce",
             event: "started",
@@ -173,6 +177,8 @@ describe("announce", () => {
         const mockedPeer1 = mock(PeerContextClass);
         const peer1 = instance(mockedPeer1);
         peer1.id = undefined;
+        peer1.swarm1 = undefined;
+        peer1.swarm2 = undefined;
         announceMessage = {
             action: "announce",
             event: "completed",
@@ -206,6 +212,7 @@ describe("announce", () => {
         const mockedPeer2 = mock(PeerContextClass);
         const peer2 = instance(mockedPeer2);
         peer2.id = undefined;
+        peer2.swarm2 = undefined;
         announceMessage = {
             action: "announce",
             event: "started",
@@ -233,6 +240,7 @@ describe("announce", () => {
         const mockedPeer3 = mock(PeerContextClass);
         const peer3 = instance(mockedPeer3);
         peer3.id = undefined;
+        peer3.swarm2 = undefined;
         announceMessage = {
             action: "announce",
             event: "completed",
@@ -270,6 +278,7 @@ describe("announce", () => {
         const mockedPeer4 = mock(PeerContextClass);
         const peer4 = instance(mockedPeer4);
         peer4.id = undefined;
+        peer4.swarm2 = undefined;
         announceMessage = {
             action: "announce",
             event: "completed",
@@ -417,6 +426,7 @@ describe("announce", () => {
         const mockedPeer0 = mock(PeerContextClass);
         const peer0 = instance(mockedPeer0);
         peer0.id = undefined;
+        peer0.swarm1 = undefined;
         announceMessage = {
             action: "announce",
             event: "started",
