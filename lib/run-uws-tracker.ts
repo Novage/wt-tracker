@@ -73,12 +73,32 @@ async function main() {
 
 async function runServers(serversSettings: any[], tracker: Tracker) {
     const servers: UWebSocketsTracker[] = [];
+    let indexHtml: Buffer | undefined;
+    try {
+        indexHtml = readFileSync("index.html");
+    } catch (e) {
+        if (e.code !== "ENOENT") {
+            throw e;
+        }
+    }
 
     for (const serverSettings of serversSettings) {
         const server = new UWebSocketsTracker(tracker, serverSettings);
 
         server.app
+        .get("/", (response: HttpResponse, request: HttpRequest) => {
+            debugRequest(server, request);
+
+            if (indexHtml !== undefined) {
+                response.end(indexHtml);
+            } else {
+                const status = "404 Not Found";
+                response.writeStatus(status).end(status);
+            }
+        })
         .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
+            debugRequest(server, request);
+
             const swarms = tracker.swarms;
             let peersCount = 0;
             for (const swarm of swarms.values()) {
@@ -103,11 +123,8 @@ async function runServers(serversSettings: any[], tracker: Tracker) {
             }));
         })
         .any("/*", (response: HttpResponse, request: HttpRequest) => {
-            if (debugRequestsEnabled) {
-                debugRequests(server.settings.server.host, server.settings.server.port,
-                    "request method:", request.getMethod(), "url:", request.getUrl(),
-                    "query:", request.getQuery());
-            }
+            debugRequest(server, request);
+
             const status = "404 Not Found";
             response.writeStatus(status).end(status);
         });
@@ -115,6 +132,14 @@ async function runServers(serversSettings: any[], tracker: Tracker) {
         servers.push(server);
         await server.run();
         console.info(`listening ${server.settings.server.host}:${server.settings.server.port}`);
+    }
+}
+
+function debugRequest(server: UWebSocketsTracker, request: HttpRequest) {
+    if (debugRequestsEnabled) {
+        debugRequests(server.settings.server.host, server.settings.server.port,
+            "request method:", request.getMethod(), "url:", request.getUrl(),
+            "query:", request.getQuery());
     }
 }
 
