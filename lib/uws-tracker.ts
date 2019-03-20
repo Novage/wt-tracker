@@ -52,7 +52,7 @@ export class UWebSocketsTracker {
                 ...((settings && settings.server) ? settings.server : {}),
             },
             websockets: {
-                path: "/",
+                path: "/*",
                 maxPayloadLength: 64 * 1024,
                 idleTimeout: 240,
                 compression: 1,
