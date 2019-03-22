@@ -5,7 +5,7 @@
         "host": "0.0.0.0"
       },
       "websockets": {
-        "path": "/",
+        "path": "/*",
         "maxPayloadLength": 65536,
         "idleTimeout": 240,
         "compression": 1
@@ -21,7 +21,7 @@
         "ssl_prefer_low_memory_usage": true
       },
       "websockets": {
-        "path": "/",
+        "path": "/*",
         "maxPayloadLength": 65536,
         "idleTimeout": 240,
         "compression": 1
