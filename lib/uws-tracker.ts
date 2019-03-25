@@ -33,6 +33,7 @@ const decoder = new StringDecoder();
 export class UWebSocketsTracker {
     private _app: TemplatedApp;
     private webSocketsCount: number = 0;
+    private validateOrigin = false;
 
     get app() {
         return this._app;
@@ -58,7 +59,15 @@ export class UWebSocketsTracker {
                 compression: 1,
                 ...((settings && settings.websockets) ? settings.websockets : {}),
             },
+            access: {
+                allowOrigins: undefined,
+                denyOrigins: undefined,
+                denyEmptyOrigin: false,
+                ...((settings && settings.access) ? settings.access : {}),
+            },
         };
+
+        this.validateAccess();
 
         this._app = this.settings.server.key_file_name === undefined
                 ? App(this.settings.server)
@@ -79,23 +88,42 @@ export class UWebSocketsTracker {
         });
     }
 
+    // tslint:disable-next-line:cognitive-complexity
+    private validateAccess() {
+        if (this.settings.access.allowOrigins !== undefined) {
+            if (this.settings.access.denyOrigins !== undefined) {
+                throw new Error("allowOrigins and denyOrigins can't be set simultaneously");
+            } else if (!(this.settings.access.allowOrigins instanceof Array)) {
+                throw new Error("allowOrigins configuration paramenters should be an array of strings");
+            }
+        } else if ((this.settings.access.denyOrigins !== undefined) && !(this.settings.access.denyOrigins instanceof Array)) {
+            throw new Error("denyOrigins configuration paramenters should be an array of strings");
+        }
+
+        const origins: string[] | undefined = (this.settings.access.allowOrigins === undefined
+            ? this.settings.access.denyOrigins
+            : this.settings.access.allowOrigins);
+
+        if (origins !== undefined) {
+            for (const origin of origins) {
+                if (typeof origin !== "string") {
+                    throw new Error("allowOrigins and denyOrigins configuration paramenters should be arrays of strings");
+                }
+            }
+        }
+
+        if (this.settings.access.denyEmptyOrigin || this.settings.access.allowOrigins || this.settings.access.denyOrigins) {
+            this.validateOrigin = true;
+        }
+    }
+
     private buildApplication() {
         this._app
         .ws(this.settings.websockets.path, {
             compression: this.settings.websockets.compression,
             maxPayloadLength: this.settings.websockets.maxPayloadLength,
             idleTimeout: this.settings.websockets.idleTimeout,
-            open: (ws: WebSocket, request: HttpRequest) => {
-                this.webSocketsCount++;
-                if (debugRequestsEnabled) {
-                    debugRequests(this.settings.server.host, this.settings.server.port,
-                        "ws-open url:", request.getUrl(), "query:", request.getQuery(),
-                        "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
-                }
-                if (debugWebSocketsEnabled) {
-                    debugWebSockets("connected via URL", request.getUrl());
-                }
-            },
+            open: this.onOpen,
             drain: (ws: WebSocket) => {
                 if (debugWebSocketsEnabled) {
                     debugWebSockets("drain", ws.getBufferedAmount());
@@ -104,6 +132,35 @@ export class UWebSocketsTracker {
             message: this.onMessage,
             close: this.onClose,
         });
+    }
+
+    private onOpen = (ws: WebSocket, request: HttpRequest) => {
+        this.webSocketsCount++;
+
+        if (debugWebSocketsEnabled) {
+            debugWebSockets("connected via URL", request.getUrl());
+        }
+
+        if (this.validateOrigin) {
+            const origin = request.getHeader("origin");
+            if ((this.settings.access.denyEmptyOrigin && origin.length === 0) ||
+                    (this.settings.access.denyOrigins && (this.settings.access.denyOrigins as string[]).includes(origin)) ||
+                    (this.settings.access.allowOrigins && !(this.settings.access.allowOrigins as string[]).includes(origin))) {
+                if (debugRequestsEnabled) {
+                    debugRequests(this.settings.server.host, this.settings.server.port,
+                        "ws-denied url:", request.getUrl(), "query:", request.getQuery(),
+                        "origin:", origin, "total:", this.webSocketsCount);
+                }
+                ws.close();
+                return;
+            }
+        }
+
+        if (debugRequestsEnabled) {
+            debugRequests(this.settings.server.host, this.settings.server.port,
+                "ws-open url:", request.getUrl(), "query:", request.getQuery(),
+                "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
+        }
     }
 
     private onMessage = (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {

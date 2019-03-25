@@ -32,5 +32,11 @@
   "tracker": {
     "maxOffers": 20,
     "announceInterval": 120
+  },
+
+  "websocketsAccess": {
+    "allowOrigins": ["https://xxx.com", "https://yyy.com"],
+    "denyOrigins": ["https://xxx.com", "https://yyy.com"],
+    "denyEmptyOrigin": true
   }
 }

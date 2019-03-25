@@ -55,7 +55,7 @@ async function main() {
         return;
     }
 
-    const serversSettings = (settings.servers === undefined ? [undefined] : settings.servers);
+    const serversSettings = (settings.servers === undefined ? [{}] : settings.servers);
 
     if (!(serversSettings instanceof Array)) {
         console.error("failed to parse JSON configuration file: 'servers' property should be an array");
@@ -65,13 +65,13 @@ async function main() {
     const tracker = new FastTracker(settings.tracker);
 
     try {
-        await runServers(serversSettings, tracker);
+        await runServers(serversSettings, tracker, settings.websocketsAccess);
     } catch (e) {
         console.error("failed to start the web server:", e.toString());
     }
 }
 
-async function runServers(serversSettings: any[], tracker: Tracker) {
+async function runServers(serversSettings: any[], tracker: Tracker, websocketsAccess: any) {
     const servers: UWebSocketsTracker[] = [];
     let indexHtml: Buffer | undefined;
     try {
@@ -83,6 +83,7 @@ async function runServers(serversSettings: any[], tracker: Tracker) {
     }
 
     for (const serverSettings of serversSettings) {
+        serverSettings.access = websocketsAccess;
         const server = new UWebSocketsTracker(tracker, serverSettings);
 
         server.app
