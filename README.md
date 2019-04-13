@@ -52,7 +52,7 @@ See [config.json](sample/config.json)
 
 |Name|Type|Description|
 |----|----|-----------|
-|servers.websockets.path|string|URL pattern for the WebSockets connection|
+|servers.websockets.path|string|URL pattern for the WebSockets endpoint|
 |servers.websockets.maxPayloadLength|number|The maximum length of received message|
 |servers.websockets.midleTimeout|number|The maximum amount of seconds that may pass without sending or getting a message. Being idle for more than this, and the connection is severed.|
 |servers.websockets.mcompression|0,1,2|0 = no compression, 1 = shared compressor, 2 = dedicated compressor (see [details](https://github.com/uNetworking/uWebSockets/blob/master/misc/READMORE.md#settings))|
