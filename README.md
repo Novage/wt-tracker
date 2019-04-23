@@ -3,10 +3,12 @@
 # wt-tracker
 High-performance WebTorrent tracker
 
+WebTorrent tracker is a required component of [WebTorrent](https://github.com/webtorrent/webtorrent) and [P2P Media Loader](https://github.com/Novage/p2p-media-loader) (live and VOD P2P video streaming) peer-to-peer networks to do WebRTC signaling - exchanging connection data (i.e. [SDP](https://en.wikipedia.org/wiki/Session_Description_Protocol)) between peers - to connect them into swarms directly in a web browser.
+
 ## Features
 
 * handles more than 60k WebSocket Secure (HTTPS) peers on single CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend
-* handles HTTP and HTTPS connections simultaneously
+* handles ws:// (HTTP) and wss:// (HTTPS) connections simultaneously
 * IPv4 and IPv6 support
 * robust and well-tested: CI, unit tests, static code analyzis, 100% TypeScript
 * supports tracker "scrape" extension
@@ -14,7 +16,7 @@ High-performance WebTorrent tracker
 
 ## Related projects
 
-* [p2p-media-loader](https://github.com/Novage/p2p-media-loader) - an open-source engine for P2P streaming of live and on demand video directly in a web browser HTML page
+* [P2P Media Loader](https://github.com/Novage/p2p-media-loader) - an open-source engine for P2P streaming of live and on demand video directly in a web browser HTML page
 * [Novage, LLC](https://novage.com.ua/) - P2P development, support & consulting
 * [WebTorrent](https://github.com/webtorrent/webtorrent) - streaming torrent client for the web https://webtorrent.io
 * [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) - the Node.js bindings to µWebSockets, one of the most efficient web servers available
