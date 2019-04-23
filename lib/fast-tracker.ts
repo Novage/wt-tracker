@@ -328,14 +328,17 @@ class Swarm {
     public completedCount = 0;
 
     private _peers: PeerContext[] = [];
-    private isPeerCompleted: boolean[] = [];
+    private completedPeers?: Set<string>;
 
     constructor(readonly infoHash: string) {}
 
     public addPeer(peer: PeerContext, completed: boolean) {
         this._peers.push(peer);
-        this.isPeerCompleted.push(completed);
         if (completed) {
+            if (this.completedPeers === undefined) {
+                this.completedPeers = new Set();
+            }
+            this.completedPeers.add(peer.id!);
             this.completedCount++;
         }
     }
@@ -343,25 +346,25 @@ class Swarm {
     public removePeer(peer: PeerContext) {
         const index = this._peers.indexOf(peer);
 
-        if (this.isPeerCompleted[index]) {
+        if ((this.completedPeers !== undefined) && this.completedPeers.delete(peer.id!))  {
             this.completedCount--;
         }
 
-        // Delete peerId from arrays without calling splice
+        // Delete peerId from array without calling splice
         const last = this._peers.pop()!;
-        const lastIsCompleted = this.isPeerCompleted.pop()!;
         if (index < this._peers.length) {
             this._peers[index] = last;
-            this.isPeerCompleted[index] = lastIsCompleted;
         }
     }
 
     public setCompleted(peer: PeerContext) {
-        const index = this._peers.indexOf(peer);
+        if (this.completedPeers === undefined) {
+            this.completedPeers = new Set();
+        }
 
-        if (!this.isPeerCompleted[index]) {
+        if (!this.completedPeers.has(peer.id!)) {
+            this.completedPeers.add(peer.id!);
             this.completedCount++;
-            this.isPeerCompleted[index] = true;
         }
     }
 
