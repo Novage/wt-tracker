@@ -20,7 +20,7 @@ export interface PeerContext {
 }
 
 export interface Tracker {
-    readonly swarms: ReadonlyMap<string, { peers: ReadonlyMap<string, PeerContext> }>;
+    readonly swarms: ReadonlyMap<string, { peers: ReadonlyArray<PeerContext> }>;
     readonly settings: any;
     processMessage(json: any, peer: PeerContext): void;
     disconnectPeer(peer: PeerContext): void;

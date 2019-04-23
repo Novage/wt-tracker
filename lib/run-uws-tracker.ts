@@ -103,7 +103,7 @@ async function runServers(serversSettings: any[], tracker: Tracker, websocketsAc
             const swarms = tracker.swarms;
             let peersCount = 0;
             for (const swarm of swarms.values()) {
-                peersCount += swarm.peers.size;
+                peersCount += swarm.peers.length;
             }
 
             const serversStats = new Array<{ server: string, webSocketsCount: number }>();

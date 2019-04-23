@@ -49,8 +49,8 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer0);
 
         expect(tracker.swarms).to.have.all.keys("swarm1");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(1);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0]);
 
         const peer1 = new PeerContextClass();
         announceMessage = {
@@ -63,9 +63,8 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer1);
 
         expect(tracker.swarms).to.have.all.keys("swarm1");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0, peer1]);
 
         announceMessage = {
             action: "announce",
@@ -78,9 +77,8 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer1);
 
         expect(tracker.swarms).to.have.all.keys("swarm1");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0, peer1]);
 
         const peer2 = new PeerContextClass();
         announceMessage = {
@@ -94,11 +92,10 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer2);
 
         expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
-        expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0");
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0, peer1]);
+        expect(tracker.swarms.get("swarm2")!.peers).to.have.lengthOf(1);
+        expect(tracker.swarms.get("swarm2")!.peers).to.include.members([peer2]);
 
         const peer3 = new PeerContextClass();
         announceMessage = {
@@ -112,12 +109,10 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer3);
 
         expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
-        expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0", "2_1");
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_1")).to.equal(peer3);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0, peer1]);
+        expect(tracker.swarms.get("swarm2")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm2")!.peers).to.include.members([peer2, peer3]);
 
         announceMessage = {
             action: "announce",
@@ -130,13 +125,10 @@ describe("announce", () => {
         tracker.processMessage(announceMessage, peer1);
 
         expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
-        expect(tracker.swarms.get("swarm1")!.peers).to.have.all.keys("0", "1");
-        expect(tracker.swarms.get("swarm1")!.peers.get("0")).to.equal(peer0);
-        expect(tracker.swarms.get("swarm1")!.peers.get("1")).to.equal(peer1);
-        expect(tracker.swarms.get("swarm2")!.peers).to.have.all.keys("2_0", "2_1", "1");
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_0")).to.equal(peer2);
-        expect(tracker.swarms.get("swarm2")!.peers.get("2_1")).to.equal(peer3);
-        expect(tracker.swarms.get("swarm2")!.peers.get("1")).to.equal(peer1);
+        expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
+        expect(tracker.swarms.get("swarm1")!.peers).to.include.members([peer0, peer1]);
+        expect(tracker.swarms.get("swarm2")!.peers).to.have.lengthOf(3);
+        expect(tracker.swarms.get("swarm2")!.peers).to.include.members([peer1, peer2, peer3]);
 
     });
 

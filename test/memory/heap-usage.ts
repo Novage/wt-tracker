@@ -59,7 +59,7 @@ for (let p = 0; p < peersCount; p++) {
 
 let peersCountAfter = 0;
 for (const swarm of tracker.swarms.values()) {
-    peersCountAfter += swarm.peers.size;
+    peersCountAfter += swarm.peers.length;
 }
 
 console.log("swarms:", tracker.swarms.size, "peers:", peersCountAfter);
@@ -69,12 +69,7 @@ console.log("bytes per peer in average: " + process.memoryUsage().heapUsed / pee
 console.log("\nremoving peers");
 
 for (const peer of peers) {
-    tracker.processMessage({
-        action: "announce",
-        event: "stopped",
-        info_hash: peer.swarms[0].swarm.infoHash,
-        peer_id: peer.id,
-    }, peer);
+    tracker.disconnectPeer(peer);
 }
 
 peers.length = 0;
