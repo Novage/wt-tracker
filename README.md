@@ -60,3 +60,7 @@ See [config.json](sample/config.json)
 |servers.websockets.mcompression|0,1,2|0 = no compression, 1 = shared compressor, 2 = dedicated compressor (see [details](https://github.com/uNetworking/uWebSockets/blob/master/misc/READMORE.md#settings))|
 |tracker.maxOffers|number|The maximum number of client's WebRTC SDP offers that are processed|
 |tracker.announceInterval|number|Desired announce interval in seconds required from the clients|
+
+## Index HTML page
+
+You can specify a content of the index page by creating `index.html` file in the working directory.
