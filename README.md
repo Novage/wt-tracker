@@ -5,7 +5,7 @@ High-performance WebTorrent tracker
 
 ## Features
 
-* handles 300k peers on single CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend
+* handles more than 60k WebSocket Secure (HTTPS) peers on single CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend
 * handles HTTP and HTTPS connections simultaneously
 * IPv4 and IPv6 support
 * robust and well-tested: CI, unit tests, static code analyzis, 100% TypeScript
