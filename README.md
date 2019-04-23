@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/Novage/wt-tracker.svg?branch=master)](https://travis-ci.org/Novage/wt-tracker)
 [![Coverage Status](https://coveralls.io/repos/github/Novage/wt-tracker/badge.svg?branch=master)](https://coveralls.io/github/Novage/wt-tracker?branch=master)
 # wt-tracker
-High-performance WebTorrent tracker
+High-performance WebTorrent tracker.
 
 WebTorrent tracker is a required component of [WebTorrent](https://github.com/webtorrent/webtorrent) and [P2P Media Loader](https://github.com/Novage/p2p-media-loader) (live and VOD P2P video streaming) peer-to-peer networks to do WebRTC signaling - exchanging connection data (i.e. [SDP](https://en.wikipedia.org/wiki/Session_Description_Protocol)) between peers - to connect them into swarms directly in a web browser.
 
