@@ -27,7 +27,7 @@ const peers: any[] = [];
 const message = {
     action: "announce",
     event: "started",
-    info_hash: "hash",
+    info_hash: "hashhashhashhashhash",
     peer_id: "",
     offers: new Array<any>(),
     numwant: offersCount,
@@ -48,7 +48,7 @@ function addingPeersToSwarm(tracker: Tracker) {
     for (let i = 0; i < peersCount; i++) {
         peers.push({
             sendMessage: sendMessage,
-            _peerId: i.toString(),
+            _peerId: i.toPrecision(19),
         });
     }
 
@@ -66,7 +66,7 @@ function addingPeersToSwarmReference() {
     peers.length = 0;
     for (let i = 0; i < peersCount; i++) {
         peers.push({
-            id: i.toString(),
+            id: i.toPrecision(19),
         });
     }
 
