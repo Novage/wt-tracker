@@ -103,6 +103,7 @@ export class FastTracker implements Tracker {
     private processAnnounce(json: any, peer: PeerContext, completed: boolean = false) {
         const infoHash = json.info_hash;
         const peerId = json.peer_id;
+        let swarm: Swarm | undefined;
 
         if (peer.id === undefined) {
             if (typeof peerId !== "string") {
@@ -112,10 +113,11 @@ export class FastTracker implements Tracker {
             peer.id = peerId;
         } else if (peer.id !== peerId) {
             throw new TrackerError("announce: different peer_id on the same connection");
+        } else {
+            swarm = (peer as any)[infoHash];
         }
 
         const isPeerCompleted = (completed || json.left === 0);
-        let swarm = (peer as any)[infoHash];
 
         if (swarm === undefined) {
             swarm = this.addPeerToSwarm(peer, infoHash, isPeerCompleted);
