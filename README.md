@@ -3,7 +3,7 @@
 # wt-tracker
 High-performance WebTorrent tracker.
 
-WebTorrent tracker is a required component of [WebTorrent](https://github.com/webtorrent/webtorrent) and [P2P Media Loader](https://github.com/Novage/p2p-media-loader) (live and VOD P2P video streaming) peer-to-peer networks to do WebRTC signaling - exchanging connection data (i.e. [SDP](https://en.wikipedia.org/wiki/Session_Description_Protocol)) between peers - to connect them into swarms directly in a web browser.
+WebTorrent tracker is a required component of [WebTorrent](https://github.com/webtorrent/webtorrent) and [P2P Media Loader](https://github.com/Novage/p2p-media-loader) (peer-to-peer networks for web browsers) to do WebRTC signaling - exchanging connection data (i.e. [SDP](https://en.wikipedia.org/wiki/Session_Description_Protocol)) between peers - joining them into swarms.
 
 ## Features
 
