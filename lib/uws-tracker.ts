@@ -34,6 +34,7 @@ export class UWebSocketsTracker {
     private _app: TemplatedApp;
     private webSocketsCount: number = 0;
     private validateOrigin = false;
+    private maxConnections = 0;
 
     get app() {
         return this._app;
@@ -57,6 +58,7 @@ export class UWebSocketsTracker {
                 maxPayloadLength: 64 * 1024,
                 idleTimeout: 240,
                 compression: 1,
+                maxConnections: 0,
                 ...((settings && settings.websockets) ? settings.websockets : {}),
             },
             access: {
@@ -66,6 +68,10 @@ export class UWebSocketsTracker {
                 ...((settings && settings.access) ? settings.access : {}),
             },
         };
+
+        if (this.settings.websockets.maxConnections !== undefined) {
+            this.maxConnections = this.settings.websockets.maxConnections;
+        }
 
         this.validateAccess();
 
@@ -136,6 +142,16 @@ export class UWebSocketsTracker {
 
     private onOpen = (ws: WebSocket, request: HttpRequest) => {
         this.webSocketsCount++;
+
+        if ((this.maxConnections !== 0) && (this.webSocketsCount > this.maxConnections)) {
+            if (debugRequestsEnabled) {
+                debugRequests(this.settings.server.host, this.settings.server.port,
+                    "ws-denied-max-connections url:", request.getUrl(), "query:", request.getQuery(),
+                    "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
+            }
+            ws.close();
+            return;
+        }
 
         if (debugWebSocketsEnabled) {
             debugWebSockets("connected via URL", request.getUrl());

@@ -58,6 +58,7 @@ See [config.json](sample/config.json)
 |servers.websockets.maxPayloadLength|number|The maximum length of received message|
 |servers.websockets.midleTimeout|number|The maximum amount of seconds that may pass without sending or getting a message. Being idle for more than this, and the connection is severed.|
 |servers.websockets.compression|0,1,2|0 = no compression, 1 = shared compressor, 2 = dedicated compressor (see [details](https://github.com/uNetworking/uWebSockets/blob/master/misc/READMORE.md#settings))|
+|servers.websockets.maxConnections|number|The maximum number of WebSocket connections. 0 = no limit.|
 |tracker.maxOffers|number|The maximum number of client's WebRTC SDP offers that are processed|
 |tracker.announceInterval|number|Desired announce interval in seconds required from the clients|
 

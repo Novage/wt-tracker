@@ -8,7 +8,8 @@
         "path": "/*",
         "maxPayloadLength": 65536,
         "idleTimeout": 240,
-        "compression": 1
+        "compression": 1,
+        "maxConnections": 0
       }
     }, {
       "server": {
