@@ -23,7 +23,7 @@ WebTorrent tracker is a required component of [WebTorrent](https://github.com/we
 
 ## Build instructions
 
-Node.js 10.x or 11.x is required.
+Node.js 10+ is required.
 
 ```sh
 npm install
