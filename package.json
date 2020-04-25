@@ -44,23 +44,23 @@
   },
   "dependencies": {
     "debug": "^4.1.1",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v17.2.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v17.4.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.2.9",
+    "@types/chai": "^4.2.11",
     "@types/debug": "^4.1.5",
-    "@types/mocha": "^7.0.1",
-    "@types/node": "^13.7.6",
-    "@types/ws": "^7.2.2",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^13.13.2",
+    "@types/ws": "^7.2.4",
     "chai": "^4.2.0",
-    "coveralls": "^3.0.9",
-    "mocha": "^7.1.0",
-    "nyc": "^15.0.0",
+    "coveralls": "^3.1.0",
+    "mocha": "^7.1.1",
+    "nyc": "^15.0.1",
     "rimraf": "^3.0.2",
     "ts-mockito": "^2.5.0",
-    "tslint": "^6.0.0",
+    "tslint": "^6.1.1",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "^3.8.2",
-    "ws": "^7.2.1"
+    "typescript": "^3.8.3",
+    "ws": "^7.2.5"
   }
 }
