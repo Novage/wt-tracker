@@ -17,8 +17,6 @@
 import { FastTracker } from "../../lib/fast-tracker";
 import { Tracker } from "../../lib/tracker";
 
-// tslint:disable:no-console
-
 function sendMessage() {}
 const peersCount = 100000;
 const offersCount = 10;
@@ -61,7 +59,6 @@ function addingPeersToSwarm(tracker: Tracker) {
     console.timeEnd(`adding peers to a swarm ${tracker.constructor.name}`);
 }
 
-// tslint:disable-next-line:cognitive-complexity
 function addingPeersToSwarmReference() {
     peers.length = 0;
     for (let i = 0; i < peersCount; i++) {

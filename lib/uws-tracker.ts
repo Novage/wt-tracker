@@ -14,44 +14,64 @@
  * limitations under the License.
  */
 
-import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
-import { Tracker, TrackerError } from "./tracker";
 import { StringDecoder } from "string_decoder";
+import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
 import * as Debug from "debug";
+import { Tracker, TrackerError, PeerContext } from "./tracker";
+import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker";
 
+// eslint-disable-next-line new-cap
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
 
+// eslint-disable-next-line new-cap
 const debugMessages = Debug("wt-tracker:uws-tracker-messages");
 const debugMessagesEnabled = debugMessages.enabled;
 
+// eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
 const decoder = new StringDecoder();
 
-export class UWebSocketsTracker {
-    private _app: TemplatedApp;
-    private webSocketsCount: number = 0;
-    private validateOrigin = false;
-    private maxConnections = 0;
+export interface UwsTrackerSettings {
+    server: ServerSettings;
+    websockets: WebSocketsSettings;
+    access: WebSocketsAccessSettings;
+}
 
-    get app() {
-        return this._app;
+export interface PartialUwsTrackerSettings {
+    server?: Partial<ServerSettings>;
+    websockets?: Partial<WebSocketsSettings>;
+    access?: Partial<WebSocketsAccessSettings>;
+}
+
+export class UWebSocketsTracker {
+    public readonly settings: UwsTrackerSettings;
+
+    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
+    readonly #app: TemplatedApp;
+
+    private webSocketsCount = 0;
+    private validateOrigin = false;
+    private readonly maxConnections: number;
+
+    public get app(): TemplatedApp {
+        return this.#app;
     }
 
-    get stats() {
+    public get stats(): { webSocketsCount: number } {
         return {
             webSocketsCount: this.webSocketsCount,
         };
     }
 
-    constructor(readonly tracker: Tracker, readonly settings: any = {}) {
+    public constructor(public readonly tracker: Readonly<Tracker>, settings: PartialUwsTrackerSettings) {
         this.settings = {
             server: {
                 port: 8000,
                 host: "0.0.0.0",
-                ...((settings && settings.server) ? settings.server : {}),
+                ...settings.server,
             },
             websockets: {
                 path: "/*",
@@ -59,43 +79,50 @@ export class UWebSocketsTracker {
                 idleTimeout: 240,
                 compression: 1,
                 maxConnections: 0,
-                ...((settings && settings.websockets) ? settings.websockets : {}),
+                ...settings.websockets,
             },
             access: {
                 allowOrigins: undefined,
                 denyOrigins: undefined,
                 denyEmptyOrigin: false,
-                ...((settings && settings.access) ? settings.access : {}),
+                ...settings.access,
             },
         };
 
-        if (this.settings.websockets.maxConnections !== undefined) {
-            this.maxConnections = this.settings.websockets.maxConnections;
-        }
+        this.maxConnections = this.settings.websockets.maxConnections;
 
         this.validateAccess();
 
-        this._app = this.settings.server.key_file_name === undefined
-                ? App(this.settings.server)
-                : SSLApp(this.settings.server);
+        this.#app = (this.settings.server.key_file_name === undefined)
+            // eslint-disable-next-line new-cap
+            ? App(this.settings.server)
+            // eslint-disable-next-line new-cap
+            : SSLApp(this.settings.server);
 
         this.buildApplication();
     }
 
-    public async run() {
-        return new Promise<void>((resolve, reject) => {
-            this._app.listen(this.settings.server.host, this.settings.server.port, (token: any) => {
-                if (token) {
-                    resolve();
-                } else {
-                    reject(new Error(`failed to listen to ${this.settings.server.host}:${this.settings.server.port}`));
-                }
-            });
-        });
+    public async run(): Promise<void> {
+        await new Promise<void>(
+            (resolve, reject) => {
+                this.#app.listen(
+                    this.settings.server.host,
+                    this.settings.server.port,
+                    (token: false | object) => {
+                        if (token === false) {
+                            reject(new Error(
+                                `failed to listen to ${this.settings.server.host}:${this.settings.server.port}`,
+                            ));
+                        } else {
+                            resolve();
+                        }
+                    },
+                );
+            },
+        );
     }
 
-    // tslint:disable-next-line:cognitive-complexity
-    private validateAccess() {
+    private validateAccess(): void {
         if (this.settings.access.allowOrigins !== undefined) {
             if (this.settings.access.denyOrigins !== undefined) {
                 throw new Error("allowOrigins and denyOrigins can't be set simultaneously");
@@ -118,36 +145,49 @@ export class UWebSocketsTracker {
             }
         }
 
-        if (this.settings.access.denyEmptyOrigin || this.settings.access.allowOrigins || this.settings.access.denyOrigins) {
-            this.validateOrigin = true;
-        }
+        this.validateOrigin = (
+            this.settings.access.denyEmptyOrigin
+            || (this.settings.access.allowOrigins !== undefined)
+            || (this.settings.access.denyOrigins !== undefined)
+        );
     }
 
-    private buildApplication() {
-        this._app
-        .ws(this.settings.websockets.path, {
-            compression: this.settings.websockets.compression,
-            maxPayloadLength: this.settings.websockets.maxPayloadLength,
-            idleTimeout: this.settings.websockets.idleTimeout,
-            open: this.onOpen,
-            drain: (ws: WebSocket) => {
-                if (debugWebSocketsEnabled) {
-                    debugWebSockets("drain", ws.getBufferedAmount());
-                }
+    private buildApplication(): void {
+        this.#app.ws(
+            this.settings.websockets.path,
+            {
+                compression: this.settings.websockets.compression,
+                maxPayloadLength: this.settings.websockets.maxPayloadLength,
+                idleTimeout: this.settings.websockets.idleTimeout,
+                open: this.onOpen,
+                drain: (ws: WebSocket) => {
+                    if (debugWebSocketsEnabled) {
+                        debugWebSockets("drain", ws.getBufferedAmount());
+                    }
+                },
+                message: this.onMessage,
+                close: this.onClose,
             },
-            message: this.onMessage,
-            close: this.onClose,
-        });
+        );
     }
 
-    private onOpen = (ws: WebSocket, request: HttpRequest) => {
+    private readonly onOpen = (ws: WebSocket, request: HttpRequest): void => {
         this.webSocketsCount++;
 
         if ((this.maxConnections !== 0) && (this.webSocketsCount > this.maxConnections)) {
             if (debugRequestsEnabled) {
-                debugRequests(this.settings.server.host, this.settings.server.port,
-                    "ws-denied-max-connections url:", request.getUrl(), "query:", request.getQuery(),
-                    "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
+                debugRequests(
+                    this.settings.server.host,
+                    this.settings.server.port,
+                    "ws-denied-max-connections url:",
+                    request.getUrl(),
+                    "query:",
+                    request.getQuery(),
+                    "origin:",
+                    request.getHeader("origin"),
+                    "total:",
+                    this.webSocketsCount,
+                );
             }
             ws.close();
             return;
@@ -159,13 +199,27 @@ export class UWebSocketsTracker {
 
         if (this.validateOrigin) {
             const origin = request.getHeader("origin");
-            if ((this.settings.access.denyEmptyOrigin && origin.length === 0) ||
-                    (this.settings.access.denyOrigins && (this.settings.access.denyOrigins as string[]).includes(origin)) ||
-                    (this.settings.access.allowOrigins && !(this.settings.access.allowOrigins as string[]).includes(origin))) {
+
+            const shoulDeny = (
+                (this.settings.access.denyEmptyOrigin && (origin.length === 0))
+                || (this.settings.access.denyOrigins?.includes(origin) === true)
+                || (this.settings.access.allowOrigins?.includes(origin) === false)
+            );
+
+            if (shoulDeny) {
                 if (debugRequestsEnabled) {
-                    debugRequests(this.settings.server.host, this.settings.server.port,
-                        "ws-denied url:", request.getUrl(), "query:", request.getQuery(),
-                        "origin:", origin, "total:", this.webSocketsCount);
+                    debugRequests(
+                        this.settings.server.host,
+                        this.settings.server.port,
+                        "ws-denied url:",
+                        request.getUrl(),
+                        "query:",
+                        request.getQuery(),
+                        "origin:",
+                        origin,
+                        "total:",
+                        this.webSocketsCount,
+                    );
                 }
                 ws.close();
                 return;
@@ -173,18 +227,27 @@ export class UWebSocketsTracker {
         }
 
         if (debugRequestsEnabled) {
-            debugRequests(this.settings.server.host, this.settings.server.port,
-                "ws-open url:", request.getUrl(), "query:", request.getQuery(),
-                "origin:", request.getHeader("origin"), "total:", this.webSocketsCount);
+            debugRequests(
+                this.settings.server.host,
+                this.settings.server.port,
+                "ws-open url:",
+                request.getUrl(),
+                "query:",
+                request.getQuery(),
+                "origin:",
+                request.getHeader("origin"),
+                "total:",
+                this.webSocketsCount,
+            );
         }
-    }
+    };
 
-    private onMessage = (ws: WebSocket, message: ArrayBuffer, isBinary: boolean) => {
+    private readonly onMessage = (ws: WebSocket, message: ArrayBuffer): void => {
         debugWebSockets("message of size", message.byteLength);
 
-        let json: any;
+        let json: object | undefined = undefined;
         try {
-            json = JSON.parse(decoder.end(new Uint8Array(message) as any));
+            json = JSON.parse(decoder.end(new Uint8Array(message) as Buffer)) as object;
         } catch (e) {
             debugWebSockets("failed to parse JSON message", e);
             ws.close();
@@ -196,11 +259,15 @@ export class UWebSocketsTracker {
         }
 
         if (debugMessagesEnabled) {
-            debugMessages("in", ws.id !== undefined ? Buffer.from(ws.id).toString("hex") : "unknown peer", json);
+            debugMessages(
+                "in",
+                (ws.id === undefined) ? "unknown peer" : Buffer.from(ws.id).toString("hex"),
+                json,
+            );
         }
 
         try {
-            this.tracker.processMessage(json, ws as any);
+            this.tracker.processMessage(json, ws as unknown as PeerContext);
         } catch (e) {
             if (e instanceof TrackerError) {
                 debugWebSockets("failed to process message from the peer:", e);
@@ -209,22 +276,26 @@ export class UWebSocketsTracker {
                 throw e;
             }
         }
-    }
+    };
 
-    private onClose = (ws: WebSocket, code: number, message: ArrayBuffer) => {
+    private readonly onClose = (ws: WebSocket, code: number): void => {
         this.webSocketsCount--;
 
         if (ws.sendMessage !== undefined) {
-            this.tracker.disconnectPeer(ws as any);
+            this.tracker.disconnectPeer(ws as unknown as PeerContext);
         }
 
         debugWebSockets("closed with code", code);
-    }
+    };
 }
 
-function sendMessage(json: any, ws: WebSocket) {
+function sendMessage(json: object, ws: WebSocket): void {
     ws.send(JSON.stringify(json), false, false);
     if (debugMessagesEnabled) {
-        debugMessages("out", ws.id !== undefined ? Buffer.from(ws.id).toString("hex") : "unknown peer", json);
+        debugMessages(
+            "out",
+            (ws.id === undefined) ? "unknown peer" : Buffer.from(ws.id).toString("hex"),
+            json,
+        );
     }
 }

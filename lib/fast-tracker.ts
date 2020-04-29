@@ -14,34 +14,50 @@
  * limitations under the License.
  */
 
-import { Tracker, PeerContext, TrackerError } from "./tracker";
+/* eslint-disable camelcase */
 
 import * as Debug from "debug";
+import { Tracker, PeerContext, TrackerError } from "./tracker";
 
+// eslint-disable-next-line new-cap
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-export class FastTracker implements Tracker {
-    private _swarms = new Map<string, Swarm>();
-    private _peers = new Map<string, PeerContext>();
+interface UnknownObject {
+    [key: string]: unknown;
+}
 
-    constructor(readonly settings: any = {}) {
+interface Settings {
+    maxOffers: number;
+    announceInterval: number;
+}
+
+export class FastTracker implements Tracker {
+    public readonly settings: Settings;
+
+    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
+    readonly #swarms = new Map<string, Swarm>();
+    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
+    readonly #peers = new Map<string, PeerContext>();
+
+    public constructor(settings?: Partial<Settings>) {
         this.settings = {
             maxOffers: 20,
             announceInterval: 120,
-            ...(settings ? settings : {}),
+            ...settings,
         };
     }
 
-    public get swarms(): ReadonlyMap<string, { peers: ReadonlyArray<PeerContext> }> {
-        return this._swarms;
+    public get swarms(): ReadonlyMap<string, { peers: readonly PeerContext[] }> {
+        return this.#swarms;
     }
 
-    public processMessage(json: any, peer: PeerContext) {
-        const action: any = json.action;
+    public processMessage(jsonObject: object, peer: PeerContext): void {
+        const json = jsonObject as UnknownObject;
+        const action = json.action;
 
         if (action === "announce") {
-            const event: any = json.event;
+            const event = json.event;
 
             if (event === undefined) {
                 if (json.answer === undefined) {
@@ -65,7 +81,7 @@ export class FastTracker implements Tracker {
         }
     }
 
-    public disconnectPeer(peer: PeerContext) {
+    public disconnectPeer(peer: PeerContext): void {
         const peerId = peer.id;
         if (peerId === undefined) {
             return;
@@ -75,16 +91,17 @@ export class FastTracker implements Tracker {
             debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
         }
 
-        // tslint:disable-next-line:forin
+        // eslint-disable-next-line guard-for-in
         for (const infoHash in peer) {
-            const swarm: any = (peer as any)[infoHash];
+            const swarm = (peer as unknown as UnknownObject)[infoHash];
 
             if (!(swarm instanceof Swarm)) {
                 continue;
             }
 
             swarm.removePeer(peer);
-            delete (peer as any)[infoHash];
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+            delete (peer as unknown as UnknownObject)[infoHash];
 
             if (debugEnabled) {
                 debug("disconnect peer: peer", Buffer.from(peerId).toString("hex"), "removed from swarm", Buffer.from(infoHash).toString("hex"));
@@ -94,18 +111,18 @@ export class FastTracker implements Tracker {
                 if (debugEnabled) {
                     debug("disconnect peer: swarm removed (empty)", Buffer.from(swarm.infoHash).toString("hex"));
                 }
-                this._swarms.delete(swarm.infoHash);
+                this.#swarms.delete(swarm.infoHash);
             }
         }
 
-        this._peers.delete(peerId);
+        this.#peers.delete(peerId);
         peer.id = undefined;
     }
 
-    private processAnnounce(json: any, peer: PeerContext, completed: boolean = false) {
+    private processAnnounce(json: UnknownObject, peer: PeerContext, completed = false): void {
         const infoHash = json.info_hash;
         const peerId = json.peer_id;
-        let swarm: Swarm | undefined;
+        let swarm: unknown = undefined;
 
         if (peer.id === undefined) {
             if (typeof peerId !== "string") {
@@ -114,16 +131,16 @@ export class FastTracker implements Tracker {
 
             peer.id = peerId;
 
-            const oldPeer = this._peers.get(peerId);
+            const oldPeer = this.#peers.get(peerId);
             if (oldPeer !== undefined) {
                 this.disconnectPeer(oldPeer);
             }
 
-            this._peers.set(peerId, peer);
-        } else if (peer.id !== peerId) {
-            throw new TrackerError("announce: different peer_id on the same connection");
+            this.#peers.set(peerId, peer);
+        } else if (peer.id === peerId) {
+            swarm = (peer as unknown as UnknownObject)[infoHash as string];
         } else {
-            swarm = (peer as any)[infoHash];
+            throw new TrackerError("announce: different peer_id on the same connection");
         }
 
         const isPeerCompleted = (completed || json.left === 0);
@@ -132,7 +149,12 @@ export class FastTracker implements Tracker {
             swarm = this.addPeerToSwarm(peer, infoHash, isPeerCompleted);
         } else if (swarm instanceof Swarm) {
             if (debugEnabled) {
-                debug("announce: peer", Buffer.from(peer.id).toString("hex"), "in swarm", Buffer.from(infoHash).toString("hex"));
+                debug(
+                    "announce: peer",
+                    Buffer.from(peer.id).toString("hex"),
+                    "in swarm",
+                    Buffer.from(infoHash as string).toString("hex"),
+                );
             }
 
             if (isPeerCompleted) {
@@ -146,15 +168,15 @@ export class FastTracker implements Tracker {
             action: "announce",
             interval: this.settings.announceInterval,
             info_hash: infoHash,
-            complete: swarm.completedCount,
-            incomplete: swarm.peers.length - swarm.completedCount,
+            complete: (swarm as Swarm).completedCount,
+            incomplete: (swarm as Swarm).peers.length - (swarm as Swarm).completedCount,
         }, peer);
 
-        this.sendOffersToPeers(json, swarm.peers, peer, infoHash);
+        this.sendOffersToPeers(json, (swarm as Swarm).peers, peer, infoHash as string);
     }
 
-    private addPeerToSwarm(peer: PeerContext, infoHash: any, completed: boolean): Swarm {
-        let swarm = this._swarms.get(infoHash);
+    private addPeerToSwarm(peer: PeerContext, infoHash: unknown, completed: boolean): Swarm {
+        let swarm = this.#swarms.get(infoHash as string);
 
         if (swarm === undefined) {
             if (typeof infoHash !== "string") {
@@ -166,32 +188,41 @@ export class FastTracker implements Tracker {
             }
 
             swarm = new Swarm(infoHash);
-            this._swarms.set(infoHash, swarm);
+            this.#swarms.set(infoHash, swarm);
         }
 
         if (debugEnabled) {
-            debug("announce: peer", Buffer.from(peer.id!).toString("hex"), "added to swarm", Buffer.from(infoHash).toString("hex"));
+            debug(
+                "announce: peer",
+                Buffer.from(peer.id!).toString("hex"),
+                "added to swarm",
+                Buffer.from(infoHash as string).toString("hex"),
+            );
         }
 
         swarm.addPeer(peer, completed);
-        (peer as any)[infoHash] = swarm;
+        (peer as unknown as UnknownObject)[infoHash as string] = swarm;
         return swarm;
     }
 
-    // tslint:disable-next-line:cognitive-complexity
-    private sendOffersToPeers(json: any, peers: ReadonlyArray<PeerContext>, peer: PeerContext, infoHash: string) {
+    private sendOffersToPeers(
+        json: UnknownObject,
+        peers: readonly PeerContext[],
+        peer: PeerContext,
+        infoHash: string,
+    ): void {
         if (peers.length <= 1) {
             return;
         }
 
-        const offers: any = json.offers;
-        if (offers == undefined) {
+        const offers = json.offers;
+        if (offers === undefined) {
             return;
         } else if (!(offers instanceof Array)) {
             throw new TrackerError("announce: offers field is not an array");
         }
 
-        const numwant = json.numwant;
+        const numwant = json.numwant as number;
         if (!Number.isInteger(numwant)) {
             return;
         }
@@ -201,7 +232,7 @@ export class FastTracker implements Tracker {
 
         if (countOffersToSend === countPeersToSend) {
             // we have offers for all the peers from the swarm - send offers to all
-            const offersIterator = offers.values();
+            const offersIterator = (offers as unknown[]).values();
             for (const toPeer of peers) {
                 if (toPeer !== peer) {
                     sendOffer(offersIterator.next().value, peer.id!, toPeer, infoHash);
@@ -227,12 +258,12 @@ export class FastTracker implements Tracker {
             }
         }
 
-        debug("announce: sent offers", countOffersToSend < 0 ? 0 : countOffersToSend);
+        debug("announce: sent offers", (countOffersToSend < 0) ? 0 : countOffersToSend);
     }
 
-    private processAnswer(json: any, peer: PeerContext) {
-        const toPeerId = json.to_peer_id;
-        const toPeer = this._peers.get(toPeerId);
+    private processAnswer(json: UnknownObject, peer: PeerContext): void {
+        const toPeerId = json.to_peer_id as string;
+        const toPeer = this.#peers.get(toPeerId);
         if (toPeer === undefined) {
             throw new TrackerError("answer: to_peer_id is not in the swarm");
         }
@@ -242,13 +273,18 @@ export class FastTracker implements Tracker {
         toPeer.sendMessage(json, toPeer);
 
         if (debugEnabled) {
-            debug("answer: from peer", Buffer.from(peer.id!).toString("hex"), "to peer", Buffer.from(toPeerId).toString("hex"));
+            debug(
+                "answer: from peer",
+                Buffer.from(peer.id!).toString("hex"),
+                "to peer",
+                Buffer.from(toPeerId).toString("hex"),
+            );
         }
     }
 
-    private processStop(json: any, peer: PeerContext) {
-        const infoHash: string = json.info_hash;
-        const swarm = (peer as any)[infoHash] as Swarm | undefined;
+    private processStop(json: UnknownObject, peer: PeerContext): void {
+        const infoHash = json.info_hash;
+        const swarm = (peer as unknown as UnknownObject)[infoHash as string];
 
         if (!(swarm instanceof Swarm)) {
             debug("stop event: peer not in the swarm");
@@ -256,26 +292,32 @@ export class FastTracker implements Tracker {
         }
 
         if (debugEnabled) {
-            debug("stop event: peer", Buffer.from(peer.id!).toString("hex"), "removed from swarm", Buffer.from(infoHash).toString("hex"));
+            debug(
+                "stop event: peer",
+                Buffer.from(peer.id!).toString("hex"),
+                "removed from swarm",
+                Buffer.from(infoHash as string).toString("hex"),
+            );
         }
 
         swarm.removePeer(peer);
-        delete (peer as any)[infoHash];
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete (peer as unknown as UnknownObject)[infoHash as string];
 
         if (swarm.peers.length === 0) {
             if (debugEnabled) {
-                debug("stop event: swarm removed (empty)", Buffer.from(infoHash).toString("hex"));
+                debug("stop event: swarm removed (empty)", Buffer.from(infoHash as string).toString("hex"));
             }
-            this._swarms.delete(infoHash);
+            this.#swarms.delete(infoHash as string);
         }
     }
 
-    private processScrape(json: any, peer: PeerContext) {
-        const infoHash: any = json.info_hash;
-        const files: {[key: string]: { complete: number, incomplete: number, downloaded: number}} = {};
+    private processScrape(json: UnknownObject, peer: PeerContext): void {
+        const infoHash = json.info_hash;
+        const files: { [key: string]: { complete: number; incomplete: number; downloaded: number } } = {};
 
         if (infoHash === undefined) {
-            for (const swarm of this._swarms.values()) {
+            for (const swarm of this.#swarms.values()) {
                 files[swarm.infoHash] = {
                     complete: swarm.completedCount,
                     incomplete: swarm.peers.length - swarm.completedCount,
@@ -283,10 +325,10 @@ export class FastTracker implements Tracker {
                 };
             }
         } else if (infoHash instanceof Array) {
-            for (const singleInfoHash of infoHash) {
-                const swarm = this._swarms.get(singleInfoHash);
+            for (const singleInfoHash of infoHash as unknown[]) {
+                const swarm = this.#swarms.get(singleInfoHash as string);
                 if (swarm !== undefined) {
-                    files[singleInfoHash] = {
+                    files[singleInfoHash as string] = {
                         complete: swarm.completedCount,
                         incomplete: swarm.peers.length - swarm.completedCount,
                         downloaded: swarm.completedCount,
@@ -300,9 +342,9 @@ export class FastTracker implements Tracker {
                 }
             }
         } else {
-            const swarm = this._swarms.get(infoHash);
+            const swarm = this.#swarms.get(infoHash as string);
             if (swarm !== undefined) {
-                files[infoHash] = {
+                files[infoHash as string] = {
                     complete: swarm.completedCount,
                     incomplete: swarm.peers.length - swarm.completedCount,
                     downloaded: swarm.completedCount,
@@ -316,24 +358,21 @@ export class FastTracker implements Tracker {
             }
         }
 
-        peer.sendMessage({
-            action: "scrape",
-            files: files,
-        }, peer);
+        peer.sendMessage({ action: "scrape", files: files }, peer);
     }
 }
 
-// tslint:disable-next-line:max-classes-per-file
 class Swarm {
     public completedCount = 0;
 
-    private _peers: PeerContext[] = [];
+    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
+    readonly #peers: PeerContext[] = [];
     private completedPeers?: Set<string>;
 
-    constructor(readonly infoHash: string) {}
+    public constructor(public readonly infoHash: string) { }
 
-    public addPeer(peer: PeerContext, completed: boolean) {
-        this._peers.push(peer);
+    public addPeer(peer: PeerContext, completed: boolean): void {
+        this.#peers.push(peer);
         if (completed) {
             if (this.completedPeers === undefined) {
                 this.completedPeers = new Set();
@@ -343,21 +382,21 @@ class Swarm {
         }
     }
 
-    public removePeer(peer: PeerContext) {
-        const index = this._peers.indexOf(peer);
+    public removePeer(peer: PeerContext): void {
+        const index = this.#peers.indexOf(peer);
 
-        if ((this.completedPeers !== undefined) && this.completedPeers.delete(peer.id!))  {
+        if (this.completedPeers?.delete(peer.id!) === true) {
             this.completedCount--;
         }
 
         // Delete peerId from array without calling splice
-        const last = this._peers.pop()!;
-        if (index < this._peers.length) {
-            this._peers[index] = last;
+        const last = this.#peers.pop()!;
+        if (index < this.#peers.length) {
+            this.#peers[index] = last;
         }
     }
 
-    public setCompleted(peer: PeerContext) {
+    public setCompleted(peer: PeerContext): void {
         if (this.completedPeers === undefined) {
             this.completedPeers = new Set();
         }
@@ -368,31 +407,39 @@ class Swarm {
         }
     }
 
-    public get peers(): ReadonlyArray<PeerContext> {
-        return this._peers;
+    public get peers(): readonly PeerContext[] {
+        return this.#peers;
     }
 }
 
-function sendOffer(offerItem: {offer?: { sdp?: string }, offer_id?: string } | null, fromPeerId: string, toPeer: PeerContext, infoHash: string) {
-    if (offerItem === null) {
+function sendOffer(
+    offerItem: unknown,
+    fromPeerId: string,
+    toPeer: PeerContext,
+    infoHash: string,
+): void {
+    if (!(offerItem instanceof Object)) {
         throw new TrackerError("announce: wrong offer item format");
     }
 
-    const offer = offerItem.offer;
-    const offerId = offerItem.offer_id;
+    const offer = (offerItem as UnknownObject).offer;
+    const offerId = (offerItem as UnknownObject).offer_id;
 
-    if (offer == undefined) {
+    if (!(offer instanceof Object)) {
         throw new TrackerError("announce: wrong offer item field format");
     }
 
-    toPeer.sendMessage({
-        action: "announce",
-        info_hash: infoHash,
-        offer_id: offerId, // offerId is not validated to be a string
-        peer_id: fromPeerId,
-        offer: {
-            type: "offer",
-            sdp: offer.sdp, // offer.sdp is not validated to be a string
+    toPeer.sendMessage(
+        {
+            action: "announce",
+            info_hash: infoHash,
+            offer_id: offerId, // offerId is not validated to be a string
+            peer_id: fromPeerId,
+            offer: {
+                type: "offer",
+                sdp: (offer as UnknownObject).sdp, // offer.sdp is not validated to be a string
+            },
         },
-    }, toPeer);
+        toPeer,
+    );
 }

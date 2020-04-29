@@ -18,8 +18,6 @@ import { FastTracker } from "../lib/fast-tracker";
 import { PeerContext } from "../lib/tracker";
 import { expect } from "chai";
 
-// tslint:disable:no-unused-expression
-
 describe("simulation", () => {
     it("should pass random simulations", () => {
         const simulationsCount = 1000;
@@ -31,7 +29,7 @@ describe("simulation", () => {
         const tracker = new FastTracker();
 
         const peers: PeerContext[] = [];
-        const peersData: Array<{ infoHash?: string, peerId: string }> = [];
+        const peersData: Array<{ infoHash?: string; peerId: string }> = [];
 
         for (let i = 0; i < peersCount; i++) {
             peers.push({

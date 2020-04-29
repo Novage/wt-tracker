@@ -1,24 +1,25 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "lib": ["es2017"],
-    "strict": true,
+    "target": "ES2017",
+    "module": "CommonJS",
+    "lib": [
+      "ES2017",
+    ],
     "moduleResolution": "node",
     "declaration": true,
     "outDir": "./dist",
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
-    "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitAny": true,
-    "types": ["node"]
+    "types": [
+      "node",
+    ],
   },
   "compileOnSave": true,
   "include": [
-    "lib/**/*"
-  ]
+    "lib/**/*",
+  ],
 }
