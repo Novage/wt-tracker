@@ -1,25 +1,14 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "lib": ["es2017"],
-    "strict": true,
-    "moduleResolution": "node",
-    "declaration": true,
     "outDir": "./test_dist",
-    "noUnusedLocals": true,
-    "noUnusedParameters": false,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitAny": true,
-    "sourceMap": true,
-    "types": ["node", "mocha"]
+    "types": [
+      "node",
+      "mocha",
+    ],
   },
-  "compileOnSave": true,
   "include": [
-    "lib/**/*", "test/**/*"
-  ]
+    "lib/**/*",
+    "test/**/*",
+  ],
 }

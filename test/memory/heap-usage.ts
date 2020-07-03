@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
- // tslint:disable
-
 import { FastTracker } from "../../lib/fast-tracker";
 
 const peersCount = 100000;

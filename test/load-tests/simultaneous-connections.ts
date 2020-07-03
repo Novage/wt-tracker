@@ -16,8 +16,6 @@
 
 import * as WebSocket from "ws";
 
-// tslint:disable:no-console
-
 const peersCount = 10000;
 const swarmsCount = 10;
 const offersCount = 10;
@@ -43,7 +41,6 @@ async function timeout(milliseconds: number) {
     return new Promise<void>(resolve => setTimeout(resolve, milliseconds));
 }
 
-// tslint:disable-next-line:cognitive-complexity
 async function main() {
     try {
         for (let p = 0; p < peersCount; p++) {

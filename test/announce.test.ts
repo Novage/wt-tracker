@@ -19,11 +19,6 @@ import { PeerContext } from "../lib/tracker";
 import { expect } from "chai";
 import { mock, instance, anything, verify, capture, resetCalls } from "ts-mockito";
 
-// tslint:disable:no-useless-cast
-// tslint:disable:no-use-of-empty-return-value
-// tslint:disable:no-unused-expression
-// tslint:disable:no-big-function
-// tslint:disable: no-shadowed-variable
 class PeerContextClass implements PeerContext {
     public id?: string;
     public swarm1?: any;
