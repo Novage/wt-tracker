@@ -235,6 +235,26 @@ function buildServer(
                     memory: process.memoryUsage(),
                 }));
         },
+    ).get(
+        "/*",
+        (response: HttpResponse, request: HttpRequest) => {
+            debugRequest(server, request);
+
+            let data = undefined;
+
+            try {
+                data = readFileSync(`${process.cwd()}${request.getUrl()}`);
+            } catch (err) {
+                console.warn(err);
+            }
+
+            if (data === undefined) {
+                const status = "404 Not Found";
+                response.writeStatus(status).end(status);
+            } else {
+                response.end(data);
+            }
+        },
     ).any(
         "/*",
         (response: HttpResponse, request: HttpRequest) => {
