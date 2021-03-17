@@ -31,6 +31,7 @@
     "lint": "eslint -c .eslintrc.js --ext .ts -f visualstudio lib",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
+    "prepare": "npm run build",
     "test": "npm run test:clean && npm run test:compile && npm run test:run",
     "test:run": "nyc mocha test_dist/**/*.test.js",
     "test:compile": "tsc --project tsconfig.test.json",
