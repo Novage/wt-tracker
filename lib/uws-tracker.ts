@@ -53,7 +53,9 @@ export class UWebSocketsTracker {
     readonly #app: TemplatedApp;
 
     private webSocketsCount = 0;
+
     private validateOrigin = false;
+
     private readonly maxConnections: number;
 
     public get app(): TemplatedApp {
@@ -174,17 +176,21 @@ export class UWebSocketsTracker {
     private readonly onOpen = (ws: WebSocket, request: HttpRequest): void => {
         this.webSocketsCount++;
 
+        const url = request.getUrl();
+        const query = request.getQuery();
+        const origin = request.getHeader("origin");
+
         if ((this.maxConnections !== 0) && (this.webSocketsCount > this.maxConnections)) {
             if (debugRequestsEnabled) {
                 debugRequests(
                     this.settings.server.host,
                     this.settings.server.port,
                     "ws-denied-max-connections url:",
-                    request.getUrl(),
+                    url,
                     "query:",
-                    request.getQuery(),
+                    query,
                     "origin:",
-                    request.getHeader("origin"),
+                    origin,
                     "total:",
                     this.webSocketsCount,
                 );
@@ -194,12 +200,10 @@ export class UWebSocketsTracker {
         }
 
         if (debugWebSocketsEnabled) {
-            debugWebSockets("connected via URL", request.getUrl());
+            debugWebSockets("connected via URL", url);
         }
 
         if (this.validateOrigin) {
-            const origin = request.getHeader("origin");
-
             const shoulDeny = (
                 (this.settings.access.denyEmptyOrigin && (origin.length === 0))
                 || (this.settings.access.denyOrigins?.includes(origin) === true)
@@ -212,9 +216,9 @@ export class UWebSocketsTracker {
                         this.settings.server.host,
                         this.settings.server.port,
                         "ws-denied url:",
-                        request.getUrl(),
+                        url,
                         "query:",
-                        request.getQuery(),
+                        query,
                         "origin:",
                         origin,
                         "total:",
@@ -231,11 +235,11 @@ export class UWebSocketsTracker {
                 this.settings.server.host,
                 this.settings.server.port,
                 "ws-open url:",
-                request.getUrl(),
+                url,
                 "query:",
-                request.getQuery(),
+                query,
                 "origin:",
-                request.getHeader("origin"),
+                origin,
                 "total:",
                 this.webSocketsCount,
             );

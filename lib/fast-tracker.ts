@@ -37,6 +37,7 @@ export class FastTracker implements Tracker {
 
     // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #swarms = new Map<string, Swarm>();
+
     // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers = new Map<string, PeerContext>();
 
@@ -367,6 +368,7 @@ class Swarm {
 
     // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers: PeerContext[] = [];
+
     private completedPeers?: Set<string>;
 
     public constructor(public readonly infoHash: string) { }
