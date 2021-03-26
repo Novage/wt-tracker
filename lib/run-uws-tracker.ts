@@ -17,7 +17,9 @@
 
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
+import { extname } from "path";
 import * as Debug from "debug";
+import { contentType } from "mime-types";
 import { UWebSocketsTracker } from "./uws-tracker";
 import { FastTracker } from "./fast-tracker";
 import { Tracker } from "./tracker";
@@ -203,6 +205,7 @@ function buildServer(
                 const status = "404 Not Found";
                 response.writeStatus(status).end(status);
             } else {
+                response.writeHeader("Content-Type", "text/html; charset=utf-8");
                 response.end(indexHtml);
             }
         },
@@ -240,10 +243,12 @@ function buildServer(
         (response: HttpResponse, request: HttpRequest) => {
             debugRequest(server, request);
 
+            const path = request.getUrl();
+
             let data = undefined;
 
             try {
-                data = readFileSync(`${process.cwd()}${request.getUrl()}`);
+                data = readFileSync(`${process.cwd()}${path}`);
             } catch (err) {
                 console.warn(err);
             }
@@ -252,6 +257,13 @@ function buildServer(
                 const status = "404 Not Found";
                 response.writeStatus(status).end(status);
             } else {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+                const type = contentType(extname(path)) as string | false;
+
+                if (type !== false) {
+                    response.writeHeader("Content-Type", type);
+                }
+
                 response.end(data);
             }
         },
