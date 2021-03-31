@@ -16,13 +16,16 @@
  */
 
 import { readFileSync } from "fs";
-import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import { extname } from "path";
+
 import * as Debug from "debug";
 import { contentType } from "mime-types";
-import { UWebSocketsTracker } from "./uws-tracker";
+import { HttpResponse, HttpRequest } from "uWebSockets.js";
+
 import { FastTracker } from "./fast-tracker";
 import { Tracker } from "./tracker";
+import { UWebSocketsTracker } from "./uws-tracker";
+
 
 // eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
