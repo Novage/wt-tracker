@@ -1,0 +1,14 @@
+.github/
+.nyc_output/
+coverage/
+dist/
+lib/
+sample/
+test/
+test_dist/
+.editorconfig
+.eslintrc.js
+.nycrc.json
+.travis.yml
+tsconfig.*
+*.tgz
