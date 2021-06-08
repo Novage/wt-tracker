@@ -212,9 +212,14 @@ function buildServer(
             debugRequest(server, request);
 
             const swarms = tracker.swarms;
+            const peersCountPerInfoHash: {[key: string]: number} = {};
             let peersCount = 0;
             for (const swarm of swarms.values()) {
                 peersCount += swarm.peers.length;
+                const dump: string = JSON.stringify(swarm);
+                const dict: UnknownObject = JSON.parse(dump) as UnknownObject;
+                const infoHash: string = Buffer.from(dict.infoHash as string, "binary").toString("hex");
+                peersCountPerInfoHash[infoHash] = swarm.peers.length;
             }
 
             const serversStats = new Array<{ server: string; webSocketsCount: number }>();
@@ -233,6 +238,7 @@ function buildServer(
                     peersCount: peersCount,
                     servers: serversStats,
                     memory: process.memoryUsage(),
+                    peersCountPerInfoHash: peersCountPerInfoHash,
                 }));
         },
     ).any(
