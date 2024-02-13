@@ -23,13 +23,26 @@ import { Tracker, PeerContext, TrackerError } from "./tracker";
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-interface UnknownObject {
+interface UnknownObject { // type UnknownObject = Record<string, number>;
     [key: string]: unknown;
 }
 
 interface Settings {
     maxOffers: number;
     announceInterval: number;
+}
+
+interface OfferSendContext{
+    json: UnknownObject;
+    peer: PeerContext;
+    infoHash: string;
+}
+
+interface SendOfferParams{
+    offerItem: unknown,
+    fromPeerId: string,
+    toPeer: PeerContext,
+    infoHash: string
 }
 
 export class FastTracker implements Tracker {
@@ -54,13 +67,11 @@ export class FastTracker implements Tracker {
 
     public processMessage(jsonObject: object, peer: PeerContext): void {
         const json = jsonObject as UnknownObject;
-        const action = json.action;
-
+        const { action, event, answer } = json; 
+    
         if (action === "announce") {
-            const event = json.event;
-
             if (event === undefined) {
-                if (json.answer === undefined) {
+                if (answer === undefined) {
                     this.processAnnounce(json, peer);
                 } else {
                     this.processAnswer(json, peer);
@@ -80,6 +91,7 @@ export class FastTracker implements Tracker {
             throw new TrackerError("unknown action");
         }
     }
+    
 
     public disconnectPeer(peer: PeerContext): void {
         const peerId = peer.id;
@@ -172,7 +184,11 @@ export class FastTracker implements Tracker {
             incomplete: (swarm as Swarm).peers.length - (swarm as Swarm).completedCount,
         }, peer);
 
-        this.sendOffersToPeers(json, (swarm as Swarm).peers, peer, infoHash as string);
+        this.sendOffersToPeers((swarm as Swarm).peers, {
+            json: json,
+            peer: peer,
+            infoHash: infoHash as string,
+        });
     }
 
     private addPeerToSwarm(peer: PeerContext, infoHash: unknown, completed: boolean): Swarm {
@@ -206,16 +222,16 @@ export class FastTracker implements Tracker {
     }
 
     private sendOffersToPeers(
-        json: UnknownObject,
         peers: readonly PeerContext[],
-        peer: PeerContext,
-        infoHash: string,
+        context: OfferSendContext,
     ): void {
+        const { json, peer, infoHash } = context;
+
         if (peers.length <= 1) {
             return;
         }
 
-        const offers = json.offers;
+        const { offers } = json;
         if (offers === undefined) {
             return;
         } else if (!(offers instanceof Array)) {
@@ -235,7 +251,12 @@ export class FastTracker implements Tracker {
             const offersIterator = (offers as unknown[]).values();
             for (const toPeer of peers) {
                 if (toPeer !== peer) {
-                    sendOffer(offersIterator.next().value, peer.id!, toPeer, infoHash);
+                    sendOffer({
+                        offerItem: offersIterator.next().value,
+                        fromPeerId: peer.id!,
+                        toPeer: toPeer,
+                        infoHash: infoHash,
+                    });
                 }
             }
         } else {
@@ -248,7 +269,12 @@ export class FastTracker implements Tracker {
                 if (toPeer === peer) {
                     i--; // do one more iteration
                 } else {
-                    sendOffer(offers[i], peer.id!, toPeer, infoHash);
+                    sendOffer({
+                        offerItem: offers[i],
+                        fromPeerId: peer.id!,
+                        toPeer: toPeer,
+                        infoHash: infoHash,
+                    })
                 }
 
                 peerIndex++;
@@ -364,12 +390,19 @@ export class FastTracker implements Tracker {
 
 class Swarm {
     public completedCount = 0;
-
+    public readonly infoHash: string;
+    private completedPeers?: Set<string>;
+    
     // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers: PeerContext[] = [];
-    private completedPeers?: Set<string>;
 
-    public constructor(public readonly infoHash: string) { }
+    public constructor(infoHash: string) {
+        this.infoHash = infoHash
+     }
+
+    public get peers(): readonly PeerContext[] {
+        return this.#peers;
+    }
 
     public addPeer(peer: PeerContext, completed: boolean): void {
         this.#peers.push(peer);
@@ -406,24 +439,18 @@ class Swarm {
             this.completedCount++;
         }
     }
-
-    public get peers(): readonly PeerContext[] {
-        return this.#peers;
-    }
 }
 
 function sendOffer(
-    offerItem: unknown,
-    fromPeerId: string,
-    toPeer: PeerContext,
-    infoHash: string,
+    params: SendOfferParams,
 ): void {
+    const { offerItem, fromPeerId, toPeer, infoHash } = params;
+
     if (!(offerItem instanceof Object)) {
         throw new TrackerError("announce: wrong offer item format");
     }
 
-    const offer = (offerItem as UnknownObject).offer;
-    const offerId = (offerItem as UnknownObject).offer_id;
+    const { offer, offer_id: offerId } = offerItem as UnknownObject;
 
     if (!(offer instanceof Object)) {
         throw new TrackerError("announce: wrong offer item field format");

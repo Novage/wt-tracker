@@ -26,6 +26,14 @@ import { Tracker } from "./tracker";
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
+interface BuildServerParams{
+    tracker: Tracker,
+    serverSettings: ServerItemSettings,
+    websocketsAccess: Partial<WebSocketsAccessSettings> | undefined,
+    indexHtml: Buffer | undefined,
+    servers: UWebSocketsTracker[],
+}
+
 interface UnknownObject {
     [key: string]: unknown;
 }
@@ -171,7 +179,13 @@ async function runServers(
 
     const serverPromises = settings.servers.map(
         async (serverSettings) => {
-            const server = buildServer(tracker, serverSettings, settings.websocketsAccess, indexHtml, servers);
+            const server = buildServer({
+                tracker: tracker, 
+                serverSettings: serverSettings, 
+                websocketsAccess:settings.websocketsAccess,
+                indexHtml: indexHtml, 
+                servers: servers,
+            });
             servers.push(server);
             await server.run();
             console.info(`listening ${server.settings.server.host}:${server.settings.server.port}`);
@@ -182,12 +196,15 @@ async function runServers(
 }
 
 function buildServer(
-    tracker: Tracker,
-    serverSettings: ServerItemSettings,
-    websocketsAccess: Partial<WebSocketsAccessSettings> | undefined,
-    indexHtml: Buffer | undefined,
-    servers: UWebSocketsTracker[],
+   params: BuildServerParams,
 ): UWebSocketsTracker {
+    const { tracker,
+        serverSettings,
+        websocketsAccess,
+        indexHtml,
+        servers,
+     } = params
+
     if (!(serverSettings instanceof Object)) {
         throw Error("failed to parse JSON configuration file: 'servers' property should be an array of objects");
     }
@@ -211,7 +228,7 @@ function buildServer(
         (response: HttpResponse, request: HttpRequest) => {
             debugRequest(server, request);
 
-            const swarms = tracker.swarms;
+            const { swarms } = tracker;
             let peersCount = 0;
             for (const swarm of swarms.values()) {
                 peersCount += swarm.peers.length;
@@ -219,7 +236,7 @@ function buildServer(
 
             const serversStats = new Array<{ server: string; webSocketsCount: number }>();
             for (const serverForStats of servers) {
-                const settings = serverForStats.settings;
+                const { settings } = serverForStats;
                 serversStats.push({
                     server: `${settings.server.host}:${settings.server.port}`,
                     webSocketsCount: serverForStats.stats.webSocketsCount,

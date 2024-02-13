@@ -21,6 +21,11 @@ module.exports = {
         "import/order": "error",
         "prefer-arrow/prefer-arrow-functions": ["error", { "allowStandaloneDeclarations": true }],
 
+        "@typescript-eslint/consistent-type-imports": "off",
+        "@typescript-eslint/consistent-indexed-object-style": "off",
+        "@typescript-eslint/naming-convention": "off",
+        "camelcase": "off",
+
         "@typescript-eslint/no-extra-parens": "off",
         "@typescript-eslint/no-magic-numbers": "off",
         "@typescript-eslint/no-parameter-properties": "off",
