@@ -37,7 +37,7 @@ const decoder = new StringDecoder();
 
 interface WebSocketData {
     id?: string;
-    sendMessage?: unknown;
+    sendMessage?: (json: object, ws: WebSocket<WebSocketData>) => void;
 }
 
 export interface UwsTrackerSettings {

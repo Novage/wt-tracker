@@ -136,6 +136,7 @@ function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
     } else {
         for (const serverSettings of jsonSettings.servers) {
             if (serverSettings instanceof Object) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 servers.push(serverSettings);
             } else {
                 console.error("failed to parse JSON configuration file: 'servers' property should be an array of objects");
