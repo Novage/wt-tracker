@@ -61,7 +61,7 @@
     "eslint-plugin-prefer-arrow": "^1.2.3",
     "mocha": "^7.1.2",
     "nyc": "^15.0.1",
-    "rimraf": "^3.0.2",
+    "rimraf": "^5.0.5",
     "ts-mockito": "^2.5.0",
     "typescript": "^5.3.3",
     "ws": "^7.2.5"
