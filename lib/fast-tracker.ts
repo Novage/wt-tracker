@@ -21,9 +21,7 @@ import { Tracker, PeerContext, TrackerError } from "./tracker.js";
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-interface UnknownObject { 
-    [key: string]: unknown;
-}
+type UnknownObject = Record<string, unknown>;
 
 interface Settings {
     maxOffers: number;
@@ -358,14 +356,11 @@ export class FastTracker implements Tracker {
 
 class Swarm {
     public completedCount = 0;
-    public readonly infoHash: string;
     private completedPeers?: Set<string>;
     
     readonly #peers: PeerContext[] = [];
 
-    public constructor(infoHash: string) {
-        this.infoHash = infoHash
-     }
+    public constructor(public readonly infoHash: string) { }
 
     public get peers(): readonly PeerContext[] {
         return this.#peers;

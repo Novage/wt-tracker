@@ -12,6 +12,7 @@ module.exports = {
         "plugin:@typescript-eslint/recommended",
     ],
     "rules": {
+        "no-console": "warn",
         "@typescript-eslint/prefer-nullish-coalescing": "error",
         "spaced-comment": ["warn", "always", { markers: ["/"] }],
         curly: ["warn", "multi-line", "consistent"],

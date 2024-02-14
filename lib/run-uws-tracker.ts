@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable no-console */
+
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import Debug from "debug";
@@ -188,15 +190,13 @@ async function runServers(
 }
 
 function buildServer(
-   params: BuildServerParams,
-): UWebSocketsTracker {
-    const { tracker,
+    { tracker,
         serverSettings,
         websocketsAccess,
         indexHtml,
         servers,
-     } = params
-
+     }: BuildServerParams,
+): UWebSocketsTracker {
     if (!(serverSettings instanceof Object)) {
         throw Error("failed to parse JSON configuration file: 'servers' property should be an array of objects");
     }

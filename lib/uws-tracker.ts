@@ -20,6 +20,12 @@ import Debug from "debug";
 import { Tracker, TrackerError, PeerContext } from "./tracker.js";
 import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker.js";
 
+declare module "./tracker.js" {
+    interface PeerContext {
+        ws: WebSocket<PeerContext>;
+    }
+}
+
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
@@ -31,11 +37,6 @@ const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
 const decoder = new StringDecoder();
-
-interface WebSocketData {
-    id?: string;
-    sendMessage?: (json: object, ws: WebSocket<WebSocketData>) => void;
-}
 
 export interface UwsTrackerSettings {
     server: ServerSettings;
@@ -162,7 +163,7 @@ export class UWebSocketsTracker {
                 idleTimeout: this.settings.websockets.idleTimeout,
                 open: this.onOpen,
                 upgrade: this.onUpgrade,
-                drain: (ws: WebSocket<WebSocketData>) => {
+                drain: (ws: WebSocket<PeerContext>) => {
                     if (debugWebSocketsEnabled) {
                         debugWebSockets("drain", ws.getBufferedAmount());
                     }
@@ -194,7 +195,7 @@ export class UWebSocketsTracker {
                 );
             }
             
-            response.close() // response.end() more soft way to close con
+            response.close();
             return;
         }
 
@@ -247,9 +248,9 @@ export class UWebSocketsTracker {
             );
         }
 
-        response.upgrade(
-            {
-            myData: request.getUrl(), 
+        response.upgrade<Pick<PeerContext, 'sendMessage'>>(
+          {
+                sendMessage
           },
           request.getHeader('sec-websocket-key'),
           request.getHeader('sec-websocket-protocol'),
@@ -258,8 +259,11 @@ export class UWebSocketsTracker {
           );
     }
 
-    private readonly onMessage = (ws: WebSocket<WebSocketData>, message: ArrayBuffer): void => {
+    private readonly onMessage = (ws: WebSocket<PeerContext>, message: ArrayBuffer): void => {
         debugWebSockets("message of size", message.byteLength);
+
+        const userData = ws.getUserData();
+        userData.ws = ws;
 
         let json: object | undefined = undefined;
         try {
@@ -270,20 +274,16 @@ export class UWebSocketsTracker {
             return;
         }
 
-        if (ws.getUserData().sendMessage === undefined) {
-            ws.getUserData().sendMessage = sendMessage;
-        }
-
         if (debugMessagesEnabled) {
             debugMessages(
                 "in",
-                (ws.getUserData().id === undefined) ? "unknown peer" : Buffer.from(ws.getUserData().id!).toString("hex"),
+                (userData.id === undefined) ? "unknown peer" : Buffer.from(userData.id!).toString("hex"),
                 json,
             );
         }
 
         try {
-            this.tracker.processMessage(json, ws as unknown as PeerContext);
+            this.tracker.processMessage(json, userData);
         } catch (e) {
             if (e instanceof TrackerError) {
                 debugWebSockets("failed to process message from the peer:", e);
@@ -294,7 +294,7 @@ export class UWebSocketsTracker {
         }
     };
 
-    private readonly onClose = (ws: WebSocket<WebSocketData>, code: number): void => {
+    private readonly onClose = (ws: WebSocket<PeerContext>, code: number): void => {
         this.webSocketsCount--;
 
         if (ws.getUserData().sendMessage !== undefined) {
@@ -305,12 +305,12 @@ export class UWebSocketsTracker {
     };
 }
 
-function sendMessage(json: object, ws: WebSocket<WebSocketData>): void {
-    ws.send(JSON.stringify(json), false, false);
+function sendMessage(json: object, peerContext: PeerContext): void {
+    peerContext.ws.send(JSON.stringify(json), false, false);
     if (debugMessagesEnabled) {
         debugMessages(
             "out",
-            (ws.getUserData().id === undefined) ? "unknown peer" : Buffer.from(ws.getUserData().id!).toString("hex"),
+            (peerContext.id === undefined) ? "unknown peer" : Buffer.from(peerContext.id!).toString("hex"),
             json,
         );
     }
