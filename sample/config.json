@@ -1,5 +1,6 @@
 {
-  "servers": [{
+  "servers": [
+    {
       "server": {
         "port": 8000,
         "host": "0.0.0.0"
@@ -11,7 +12,8 @@
         "compression": 1,
         "maxConnections": 0
       }
-    }, {
+    },
+    {
       "server": {
         "port": 8433,
         "host": "0.0.0.0",
