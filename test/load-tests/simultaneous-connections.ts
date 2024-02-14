@@ -20,7 +20,7 @@ const peersCount = 10000;
 const swarmsCount = 10;
 const offersCount = 10;
 
-const offers = new Array<any>();
+const offers = new Array<unknown>();
 
 for (let o = 0; o < offersCount; o++) {
     offers.push({
@@ -68,7 +68,7 @@ async function main() {
                     }
                 });
                 webSocket.on("message", message => {
-                    const json = JSON.parse(message as string);
+                    const json = JSON.parse(message.toString());
 
                     if (!json.offer) {
                         return;
