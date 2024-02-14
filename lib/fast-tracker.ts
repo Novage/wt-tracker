@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-/* eslint-disable camelcase */
 
-import * as Debug from "debug";
-import { Tracker, PeerContext, TrackerError } from "./tracker";
+import Debug from "debug";
+import { Tracker, PeerContext, TrackerError } from "./tracker.js";
 
-// eslint-disable-next-line new-cap
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-interface UnknownObject { // type UnknownObject = Record<string, number>;
+interface UnknownObject { 
     [key: string]: unknown;
 }
 
@@ -32,25 +30,10 @@ interface Settings {
     announceInterval: number;
 }
 
-interface OfferSendContext{
-    json: UnknownObject;
-    peer: PeerContext;
-    infoHash: string;
-}
-
-interface SendOfferParams{
-    offerItem: unknown,
-    fromPeerId: string,
-    toPeer: PeerContext,
-    infoHash: string
-}
-
 export class FastTracker implements Tracker {
     public readonly settings: Settings;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #swarms = new Map<string, Swarm>();
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers = new Map<string, PeerContext>();
 
     public constructor(settings?: Partial<Settings>) {
@@ -67,11 +50,12 @@ export class FastTracker implements Tracker {
 
     public processMessage(jsonObject: object, peer: PeerContext): void {
         const json = jsonObject as UnknownObject;
-        const { action, event, answer } = json; 
+        const action = json.action;
     
         if (action === "announce") {
+            const event = json.event;
             if (event === undefined) {
-                if (answer === undefined) {
+                if (json.answer === undefined) {
                     this.processAnnounce(json, peer);
                 } else {
                     this.processAnswer(json, peer);
@@ -103,7 +87,6 @@ export class FastTracker implements Tracker {
             debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
         }
 
-        // eslint-disable-next-line guard-for-in
         for (const infoHash in peer) {
             const swarm = (peer as unknown as UnknownObject)[infoHash];
 
@@ -112,7 +95,6 @@ export class FastTracker implements Tracker {
             }
 
             swarm.removePeer(peer);
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete (peer as unknown as UnknownObject)[infoHash];
 
             if (debugEnabled) {
@@ -184,11 +166,7 @@ export class FastTracker implements Tracker {
             incomplete: (swarm as Swarm).peers.length - (swarm as Swarm).completedCount,
         }, peer);
 
-        this.sendOffersToPeers((swarm as Swarm).peers, {
-            json: json,
-            peer: peer,
-            infoHash: infoHash as string,
-        });
+        this.sendOffersToPeers(json, (swarm as Swarm).peers, peer, infoHash as string);
     }
 
     private addPeerToSwarm(peer: PeerContext, infoHash: unknown, completed: boolean): Swarm {
@@ -222,16 +200,17 @@ export class FastTracker implements Tracker {
     }
 
     private sendOffersToPeers(
+        json: UnknownObject,
         peers: readonly PeerContext[],
-        context: OfferSendContext,
+        peer: PeerContext,
+        infoHash: string,
     ): void {
-        const { json, peer, infoHash } = context;
 
         if (peers.length <= 1) {
             return;
         }
 
-        const { offers } = json;
+        const offers = json.offers;
         if (offers === undefined) {
             return;
         } else if (!(offers instanceof Array)) {
@@ -251,12 +230,7 @@ export class FastTracker implements Tracker {
             const offersIterator = (offers as unknown[]).values();
             for (const toPeer of peers) {
                 if (toPeer !== peer) {
-                    sendOffer({
-                        offerItem: offersIterator.next().value,
-                        fromPeerId: peer.id!,
-                        toPeer: toPeer,
-                        infoHash: infoHash,
-                    });
+                    sendOffer(offersIterator.next().value, peer.id!, toPeer, infoHash);
                 }
             }
         } else {
@@ -269,12 +243,7 @@ export class FastTracker implements Tracker {
                 if (toPeer === peer) {
                     i--; // do one more iteration
                 } else {
-                    sendOffer({
-                        offerItem: offers[i],
-                        fromPeerId: peer.id!,
-                        toPeer: toPeer,
-                        infoHash: infoHash,
-                    })
+                    sendOffer(offers[i], peer.id!, toPeer, infoHash);
                 }
 
                 peerIndex++;
@@ -327,7 +296,6 @@ export class FastTracker implements Tracker {
         }
 
         swarm.removePeer(peer);
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (peer as unknown as UnknownObject)[infoHash as string];
 
         if (swarm.peers.length === 0) {
@@ -393,7 +361,6 @@ class Swarm {
     public readonly infoHash: string;
     private completedPeers?: Set<string>;
     
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers: PeerContext[] = [];
 
     public constructor(infoHash: string) {
@@ -442,15 +409,18 @@ class Swarm {
 }
 
 function sendOffer(
-    params: SendOfferParams,
+    offerItem: unknown,
+    fromPeerId: string,
+    toPeer: PeerContext,
+    infoHash: string,
 ): void {
-    const { offerItem, fromPeerId, toPeer, infoHash } = params;
 
     if (!(offerItem instanceof Object)) {
         throw new TrackerError("announce: wrong offer item format");
     }
 
-    const { offer, offer_id: offerId } = offerItem as UnknownObject;
+    const offer = (offerItem as UnknownObject).offer;
+    const offerId = (offerItem as UnknownObject).offer_id;
 
     if (!(offer instanceof Object)) {
         throw new TrackerError("announce: wrong offer item field format");

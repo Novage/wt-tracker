@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Copyright 2019 Novage LLC.
  *
@@ -17,12 +16,11 @@
 
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
-import * as Debug from "debug";
-import { UWebSocketsTracker } from "./uws-tracker";
-import { FastTracker } from "./fast-tracker";
-import { Tracker } from "./tracker";
+import Debug from "debug";
+import { UWebSocketsTracker } from "./uws-tracker.js";
+import { FastTracker } from "./fast-tracker.js";
+import { Tracker } from "./tracker.js";
 
-// eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
@@ -34,9 +32,7 @@ interface BuildServerParams{
     servers: UWebSocketsTracker[],
 }
 
-interface UnknownObject {
-    [key: string]: unknown;
-}
+type UnknownObject = Record<string, unknown>;
 
 export interface Settings {
     servers: ServerItemSettings[];
@@ -52,14 +48,10 @@ export interface ServerItemSettings {
 export interface ServerSettings {
     port: number;
     host: string;
-    // eslint-disable-next-line camelcase
     key_file_name?: string;
-    // eslint-disable-next-line camelcase
     cert_file_name?: string;
     passphrase?: string;
-    // eslint-disable-next-line camelcase
     dh_params_file_name?: string;
-    // eslint-disable-next-line camelcase
     ssl_prefer_low_memory_usage?: boolean;
 }
 
@@ -136,7 +128,6 @@ function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
     } else {
         for (const serverSettings of jsonSettings.servers) {
             if (serverSettings instanceof Object) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 servers.push(serverSettings);
             } else {
                 console.error("failed to parse JSON configuration file: 'servers' property should be an array of objects");
@@ -289,5 +280,4 @@ async function run(): Promise<void> {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 run();

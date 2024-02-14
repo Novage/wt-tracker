@@ -16,9 +16,9 @@
 
 import { StringDecoder } from "string_decoder";
 import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp, us_socket_context_t, HttpResponse } from "uWebSockets.js";
-import * as Debug from "debug";
-import { Tracker, TrackerError, PeerContext } from "./tracker";
-import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker";
+import Debug from "debug";
+import { Tracker, TrackerError, PeerContext } from "./tracker.js";
+import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker.js";
 
 
 // eslint-disable-next-line new-cap
@@ -92,9 +92,7 @@ export class UWebSocketsTracker {
         this.validateAccess();
 
         this.#app = (this.settings.server.key_file_name === undefined)
-            // eslint-disable-next-line new-cap
             ? App(this.settings.server)
-            // eslint-disable-next-line new-cap
             : SSLApp(this.settings.server);
 
         this.buildApplication();
@@ -116,7 +114,6 @@ export class UWebSocketsTracker {
                 this.#app.listen(
                     this.settings.server.host,
                     this.settings.server.port,
-                    // eslint-disable-next-line @typescript-eslint/sort-type-constituents
                     (token: false | object) => {
                         if (token === false) {
                             reject(new Error(

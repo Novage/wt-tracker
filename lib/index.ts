@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-export type { UWebSocketsTracker } from "./uws-tracker";
-export type { FastTracker } from "./fast-tracker";
-export type { Tracker, PeerContext, TrackerError } from "./tracker";
+export type { UWebSocketsTracker } from "./uws-tracker.js";
+export type { FastTracker } from "./fast-tracker.js";
+export type { Tracker, PeerContext, TrackerError } from "./tracker.js";

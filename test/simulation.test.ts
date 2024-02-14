@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../lib/fast-tracker";
-import { PeerContext } from "../lib/tracker";
+import { FastTracker } from "../lib/fast-tracker.js";
+import { PeerContext } from "../lib/tracker.js";
 import { expect } from "chai";
 
 describe("simulation", () => {

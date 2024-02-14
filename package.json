@@ -7,6 +7,7 @@
   "homepage": "https://github.com/Novage/wt-tracker",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "engines": {
     "node": ">=10.0.0"
   },
@@ -28,7 +29,7 @@
     "start": "node ./dist/run-uws-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
-    "lint": "eslint -c .eslintrc.js --ext .ts -f visualstudio lib",
+    "lint": "eslint --ext .ts -f visualstudio lib",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
     "test": "npm run test:clean && npm run test:compile && npm run test:run",
@@ -47,18 +48,16 @@
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.41.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.2.11",
+    "@types/chai": "^4.3.11",
     "@types/debug": "^4.1.5",
     "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.17",
     "@types/ws": "^7.2.4",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
-    "chai": "^4.2.0",
+    "chai": "^5.1.0",
     "coveralls": "^3.1.1",
     "eslint": "^8.56.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-prefer-arrow": "^1.2.3",
     "mocha": "^10.3.0",
     "nyc": "^15.1.0",
     "rimraf": "^5.0.5",

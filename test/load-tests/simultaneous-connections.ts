@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import * as WebSocket from "ws";
+import WebSocket from "ws";
 
 const peersCount = 10000;
 const swarmsCount = 10;
