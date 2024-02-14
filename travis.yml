@@ -1,0 +1,11 @@
+language: node_js
+node_js:
+  - 20
+  - 18
+install:
+  - npm install
+script:
+  - npm run build
+  - npm test
+after_success:
+  - npm run test:coveralls
