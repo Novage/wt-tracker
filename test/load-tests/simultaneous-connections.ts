@@ -68,7 +68,7 @@ async function main() {
                     }
                 });
                 webSocket.on("message", message => {
-                    const json = JSON.parse(message.toString());
+                    const json = JSON.parse(message.toString()); // FIXME: may not work after dependencies update
 
                     if (!json.offer) {
                         return;
