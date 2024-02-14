@@ -21,15 +21,12 @@ import { Tracker, TrackerError, PeerContext } from "./tracker.js";
 import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker.js";
 
 
-// eslint-disable-next-line new-cap
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
 
-// eslint-disable-next-line new-cap
 const debugMessages = Debug("wt-tracker:uws-tracker-messages");
 const debugMessagesEnabled = debugMessages.enabled;
 
-// eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
@@ -60,7 +57,6 @@ export class UWebSocketsTracker {
     private validateOrigin = false;
     private readonly maxConnections: number;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #app: TemplatedApp;
 
     public constructor(tracker: Readonly<Tracker>, settings: PartialUwsTrackerSettings) {
