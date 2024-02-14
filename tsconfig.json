@@ -1,11 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "module": "CommonJS",
-    "lib": [
-      "ES2017",
-    ],
-    "moduleResolution": "node",
+    "target": "ES2020",
+    "module": "NodeNext",
+    "lib": [ "ES2020" ],
+    "moduleResolution": "NodeNext",
     "declaration": true,
     "outDir": "./dist",
     "strict": true,

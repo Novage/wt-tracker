@@ -15,20 +15,24 @@
  */
 
 import { StringDecoder } from "string_decoder";
-import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp } from "uWebSockets.js";
-import * as Debug from "debug";
-import { Tracker, TrackerError, PeerContext } from "./tracker";
-import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker";
+import { App, SSLApp, WebSocket, HttpRequest, TemplatedApp, us_socket_context_t, HttpResponse } from "uWebSockets.js";
+import Debug from "debug";
+import { Tracker, TrackerError, PeerContext } from "./tracker.js";
+import { ServerSettings, WebSocketsSettings, WebSocketsAccessSettings } from "./run-uws-tracker.js";
 
-// eslint-disable-next-line new-cap
+declare module "./tracker.js" {
+    interface PeerContext {
+        ws: WebSocket<PeerContext>;
+    }
+}
+
+
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
 
-// eslint-disable-next-line new-cap
 const debugMessages = Debug("wt-tracker:uws-tracker-messages");
 const debugMessagesEnabled = debugMessages.enabled;
 
-// eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
@@ -48,25 +52,16 @@ export interface PartialUwsTrackerSettings {
 
 export class UWebSocketsTracker {
     public readonly settings: UwsTrackerSettings;
-
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-    readonly #app: TemplatedApp;
+    public readonly tracker: Readonly<Tracker>;
 
     private webSocketsCount = 0;
     private validateOrigin = false;
     private readonly maxConnections: number;
 
-    public get app(): TemplatedApp {
-        return this.#app;
-    }
+    readonly #app: TemplatedApp;
 
-    public get stats(): { webSocketsCount: number } {
-        return {
-            webSocketsCount: this.webSocketsCount,
-        };
-    }
-
-    public constructor(public readonly tracker: Readonly<Tracker>, settings: PartialUwsTrackerSettings) {
+    public constructor(tracker: Readonly<Tracker>, settings: PartialUwsTrackerSettings) {
+        this.tracker = tracker;
         this.settings = {
             server: {
                 port: 8000,
@@ -94,17 +89,25 @@ export class UWebSocketsTracker {
         this.validateAccess();
 
         this.#app = (this.settings.server.key_file_name === undefined)
-            // eslint-disable-next-line new-cap
             ? App(this.settings.server)
-            // eslint-disable-next-line new-cap
             : SSLApp(this.settings.server);
 
         this.buildApplication();
     }
 
+    public get app(): TemplatedApp {
+        return this.#app;
+    }
+
+    public get stats(): { webSocketsCount: number } {
+        return {
+            webSocketsCount: this.webSocketsCount,
+        };
+    }
+
     public async run(): Promise<void> {
         await new Promise<void>(
-            (resolve, reject) => {
+            (resolve, reject) => { 
                 this.#app.listen(
                     this.settings.server.host,
                     this.settings.server.port,
@@ -133,9 +136,8 @@ export class UWebSocketsTracker {
             throw new Error("denyOrigins configuration paramenters should be an array of strings");
         }
 
-        const origins: string[] | undefined = (this.settings.access.allowOrigins === undefined
-            ? this.settings.access.denyOrigins
-            : this.settings.access.allowOrigins);
+        const origins: readonly string[] | undefined = this.settings.access.allowOrigins ?? this.settings.access.denyOrigins;
+
 
         if (origins !== undefined) {
             for (const origin of origins) {
@@ -160,7 +162,8 @@ export class UWebSocketsTracker {
                 maxPayloadLength: this.settings.websockets.maxPayloadLength,
                 idleTimeout: this.settings.websockets.idleTimeout,
                 open: this.onOpen,
-                drain: (ws: WebSocket) => {
+                upgrade: this.onUpgrade,
+                drain: (ws: WebSocket<PeerContext>) => {
                     if (debugWebSocketsEnabled) {
                         debugWebSockets("drain", ws.getBufferedAmount());
                     }
@@ -171,9 +174,11 @@ export class UWebSocketsTracker {
         );
     }
 
-    private readonly onOpen = (ws: WebSocket, request: HttpRequest): void => {
+    private readonly onOpen = (): void => {
         this.webSocketsCount++;
+    };
 
+    private readonly onUpgrade = (response: HttpResponse, request: HttpRequest, context: us_socket_context_t): void => {
         if ((this.maxConnections !== 0) && (this.webSocketsCount > this.maxConnections)) {
             if (debugRequestsEnabled) {
                 debugRequests(
@@ -189,7 +194,8 @@ export class UWebSocketsTracker {
                     this.webSocketsCount,
                 );
             }
-            ws.close();
+            
+            response.close();
             return;
         }
 
@@ -221,7 +227,8 @@ export class UWebSocketsTracker {
                         this.webSocketsCount,
                     );
                 }
-                ws.close();
+
+                response.close()
                 return;
             }
         }
@@ -240,10 +247,23 @@ export class UWebSocketsTracker {
                 this.webSocketsCount,
             );
         }
-    };
 
-    private readonly onMessage = (ws: WebSocket, message: ArrayBuffer): void => {
+        response.upgrade<Pick<PeerContext, 'sendMessage'>>(
+          {
+                sendMessage
+          },
+          request.getHeader('sec-websocket-key'),
+          request.getHeader('sec-websocket-protocol'),
+          request.getHeader('sec-websocket-extensions'),
+          context,
+          );
+    }
+
+    private readonly onMessage = (ws: WebSocket<PeerContext>, message: ArrayBuffer): void => {
         debugWebSockets("message of size", message.byteLength);
+
+        const userData = ws.getUserData();
+        userData.ws = ws;
 
         let json: object | undefined = undefined;
         try {
@@ -254,20 +274,16 @@ export class UWebSocketsTracker {
             return;
         }
 
-        if (ws.sendMessage === undefined) {
-            ws.sendMessage = sendMessage;
-        }
-
         if (debugMessagesEnabled) {
             debugMessages(
                 "in",
-                (ws.id === undefined) ? "unknown peer" : Buffer.from(ws.id).toString("hex"),
+                (userData.id === undefined) ? "unknown peer" : Buffer.from(userData.id!).toString("hex"),
                 json,
             );
         }
 
         try {
-            this.tracker.processMessage(json, ws as unknown as PeerContext);
+            this.tracker.processMessage(json, userData);
         } catch (e) {
             if (e instanceof TrackerError) {
                 debugWebSockets("failed to process message from the peer:", e);
@@ -278,10 +294,10 @@ export class UWebSocketsTracker {
         }
     };
 
-    private readonly onClose = (ws: WebSocket, code: number): void => {
+    private readonly onClose = (ws: WebSocket<PeerContext>, code: number): void => {
         this.webSocketsCount--;
 
-        if (ws.sendMessage !== undefined) {
+        if (ws.getUserData().sendMessage !== undefined) {
             this.tracker.disconnectPeer(ws as unknown as PeerContext);
         }
 
@@ -289,12 +305,12 @@ export class UWebSocketsTracker {
     };
 }
 
-function sendMessage(json: object, ws: WebSocket): void {
-    ws.send(JSON.stringify(json), false, false);
+function sendMessage(json: object, peerContext: PeerContext): void {
+    peerContext.ws.send(JSON.stringify(json), false, false);
     if (debugMessagesEnabled) {
         debugMessages(
             "out",
-            (ws.id === undefined) ? "unknown peer" : Buffer.from(ws.id).toString("hex"),
+            (peerContext.id === undefined) ? "unknown peer" : Buffer.from(peerContext.id!).toString("hex"),
             json,
         );
     }

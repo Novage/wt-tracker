@@ -1,10 +1,7 @@
 language: node_js
 node_js:
-  - 14
-  - 13
-  - 12
-  - 11
-  - 10
+  - 20
+  - 18
 install:
   - npm install
 script:

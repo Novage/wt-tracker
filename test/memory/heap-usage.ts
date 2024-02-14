@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../../lib/fast-tracker";
+import { FastTracker } from "../../lib/fast-tracker.js";
+import { PeerContext } from "../../lib/tracker.js";
 
 const peersCount = 100000;
 const swarmsCount = 1000000000;
@@ -24,7 +25,7 @@ const message = {
     event: "started",
     info_hash: "hash",
     peer_id: "",
-    offers: new Array<any>(),
+    offers: new Array<unknown>(),
     numwant: 10,
 };
 
@@ -44,7 +45,7 @@ console.log("heap", process.memoryUsage());
 console.log("bytes per peer in average: " + process.memoryUsage().heapUsed / peersCount);
 console.log("\nadding peers to swarms");
 
-const peers: any[] = [];
+const peers: PeerContext[] = [];
 for (let p = 0; p < peersCount; p++) {
     message.peer_id = p.toPrecision(19).toString();
     message.info_hash = Math.floor(swarmsCount * Math.random()).toPrecision(19).toString();

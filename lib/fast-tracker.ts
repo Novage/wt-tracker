@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-/* eslint-disable camelcase */
 
-import * as Debug from "debug";
-import { Tracker, PeerContext, TrackerError } from "./tracker";
+import Debug from "debug";
+import { Tracker, PeerContext, TrackerError } from "./tracker.js";
 
-// eslint-disable-next-line new-cap
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
-interface UnknownObject {
-    [key: string]: unknown;
-}
+type UnknownObject = Record<string, unknown>;
 
 interface Settings {
     maxOffers: number;
@@ -35,9 +31,7 @@ interface Settings {
 export class FastTracker implements Tracker {
     public readonly settings: Settings;
 
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #swarms = new Map<string, Swarm>();
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
     readonly #peers = new Map<string, PeerContext>();
 
     public constructor(settings?: Partial<Settings>) {
@@ -55,10 +49,9 @@ export class FastTracker implements Tracker {
     public processMessage(jsonObject: object, peer: PeerContext): void {
         const json = jsonObject as UnknownObject;
         const action = json.action;
-
+    
         if (action === "announce") {
             const event = json.event;
-
             if (event === undefined) {
                 if (json.answer === undefined) {
                     this.processAnnounce(json, peer);
@@ -80,6 +73,7 @@ export class FastTracker implements Tracker {
             throw new TrackerError("unknown action");
         }
     }
+    
 
     public disconnectPeer(peer: PeerContext): void {
         const peerId = peer.id;
@@ -91,7 +85,6 @@ export class FastTracker implements Tracker {
             debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
         }
 
-        // eslint-disable-next-line guard-for-in
         for (const infoHash in peer) {
             const swarm = (peer as unknown as UnknownObject)[infoHash];
 
@@ -100,7 +93,6 @@ export class FastTracker implements Tracker {
             }
 
             swarm.removePeer(peer);
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete (peer as unknown as UnknownObject)[infoHash];
 
             if (debugEnabled) {
@@ -211,6 +203,7 @@ export class FastTracker implements Tracker {
         peer: PeerContext,
         infoHash: string,
     ): void {
+
         if (peers.length <= 1) {
             return;
         }
@@ -301,7 +294,6 @@ export class FastTracker implements Tracker {
         }
 
         swarm.removePeer(peer);
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (peer as unknown as UnknownObject)[infoHash as string];
 
         if (swarm.peers.length === 0) {
@@ -364,12 +356,15 @@ export class FastTracker implements Tracker {
 
 class Swarm {
     public completedCount = 0;
-
-    // eslint-disable-next-line @typescript-eslint/explicit-member-accessibility
-    readonly #peers: PeerContext[] = [];
     private completedPeers?: Set<string>;
+    
+    readonly #peers: PeerContext[] = [];
 
     public constructor(public readonly infoHash: string) { }
+
+    public get peers(): readonly PeerContext[] {
+        return this.#peers;
+    }
 
     public addPeer(peer: PeerContext, completed: boolean): void {
         this.#peers.push(peer);
@@ -406,10 +401,6 @@ class Swarm {
             this.completedCount++;
         }
     }
-
-    public get peers(): readonly PeerContext[] {
-        return this.#peers;
-    }
 }
 
 function sendOffer(
@@ -418,6 +409,7 @@ function sendOffer(
     toPeer: PeerContext,
     infoHash: string,
 ): void {
+
     if (!(offerItem instanceof Object)) {
         throw new TrackerError("announce: wrong offer item format");
     }

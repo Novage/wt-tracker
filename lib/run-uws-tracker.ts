@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * Copyright 2019 Novage LLC.
  *
@@ -15,20 +14,27 @@
  * limitations under the License.
  */
 
+/* eslint-disable no-console */
+
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
-import * as Debug from "debug";
-import { UWebSocketsTracker } from "./uws-tracker";
-import { FastTracker } from "./fast-tracker";
-import { Tracker } from "./tracker";
+import Debug from "debug";
+import { UWebSocketsTracker } from "./uws-tracker.js";
+import { FastTracker } from "./fast-tracker.js";
+import { Tracker } from "./tracker.js";
 
-// eslint-disable-next-line new-cap
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
-interface UnknownObject {
-    [key: string]: unknown;
+interface BuildServerParams{
+    tracker: Tracker,
+    serverSettings: ServerItemSettings,
+    websocketsAccess: Partial<WebSocketsAccessSettings> | undefined,
+    indexHtml: Buffer | undefined,
+    servers: UWebSocketsTracker[],
 }
+
+type UnknownObject = Record<string, unknown>;
 
 export interface Settings {
     servers: ServerItemSettings[];
@@ -44,14 +50,10 @@ export interface ServerItemSettings {
 export interface ServerSettings {
     port: number;
     host: string;
-    // eslint-disable-next-line camelcase
     key_file_name?: string;
-    // eslint-disable-next-line camelcase
     cert_file_name?: string;
     passphrase?: string;
-    // eslint-disable-next-line camelcase
     dh_params_file_name?: string;
-    // eslint-disable-next-line camelcase
     ssl_prefer_low_memory_usage?: boolean;
 }
 
@@ -171,7 +173,13 @@ async function runServers(
 
     const serverPromises = settings.servers.map(
         async (serverSettings) => {
-            const server = buildServer(tracker, serverSettings, settings.websocketsAccess, indexHtml, servers);
+            const server = buildServer({
+                tracker: tracker, 
+                serverSettings: serverSettings, 
+                websocketsAccess:settings.websocketsAccess,
+                indexHtml: indexHtml, 
+                servers: servers,
+            });
             servers.push(server);
             await server.run();
             console.info(`listening ${server.settings.server.host}:${server.settings.server.port}`);
@@ -182,11 +190,12 @@ async function runServers(
 }
 
 function buildServer(
-    tracker: Tracker,
-    serverSettings: ServerItemSettings,
-    websocketsAccess: Partial<WebSocketsAccessSettings> | undefined,
-    indexHtml: Buffer | undefined,
-    servers: UWebSocketsTracker[],
+    { tracker,
+        serverSettings,
+        websocketsAccess,
+        indexHtml,
+        servers,
+     }: BuildServerParams,
 ): UWebSocketsTracker {
     if (!(serverSettings instanceof Object)) {
         throw Error("failed to parse JSON configuration file: 'servers' property should be an array of objects");
@@ -211,7 +220,7 @@ function buildServer(
         (response: HttpResponse, request: HttpRequest) => {
             debugRequest(server, request);
 
-            const swarms = tracker.swarms;
+            const { swarms } = tracker;
             let peersCount = 0;
             for (const swarm of swarms.values()) {
                 peersCount += swarm.peers.length;
@@ -219,7 +228,7 @@ function buildServer(
 
             const serversStats = new Array<{ server: string; webSocketsCount: number }>();
             for (const serverForStats of servers) {
-                const settings = serverForStats.settings;
+                const { settings } = serverForStats;
                 serversStats.push({
                     server: `${settings.server.host}:${settings.server.port}`,
                     webSocketsCount: serverForStats.stats.webSocketsCount,
@@ -271,5 +280,4 @@ async function run(): Promise<void> {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 run();
