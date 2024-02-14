@@ -2,14 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./test_dist",
-    "types": [
-      "node",
-      "mocha",
-    ],
+    "types": ["node", "mocha"]
   },
-  "include": [
-    "lib/tracker.ts",
-    "lib/fast-tracker.ts",
-    "test/**/*",
-  ],
+  "include": ["lib/tracker.ts", "lib/fast-tracker.ts", "test/**/*"]
 }

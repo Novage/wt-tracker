@@ -15,15 +15,15 @@
  */
 
 export interface PeerContext {
-    id?: string;
-    sendMessage: (json: object, peer: PeerContext) => void;
+  id?: string;
+  sendMessage: (json: object, peer: PeerContext) => void;
 }
 
 export interface Tracker {
-    readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
-    readonly settings: object;
-    processMessage: (json: object, peer: PeerContext) => void;
-    disconnectPeer: (peer: PeerContext) => void;
+  readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
+  readonly settings: object;
+  processMessage: (json: object, peer: PeerContext) => void;
+  disconnectPeer: (peer: PeerContext) => void;
 }
 
-export class TrackerError extends Error { }
+export class TrackerError extends Error {}

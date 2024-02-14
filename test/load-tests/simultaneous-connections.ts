@@ -23,13 +23,13 @@ const offersCount = 10;
 const offers = new Array<unknown>();
 
 for (let o = 0; o < offersCount; o++) {
-    offers.push({
-        offer: {
-            sdp: "asdfasdfasdfasdfasdfasdfasdf",
-            value: 1,
-        },
-        offer_id: "taasdfasdfasdfasd",
-    });
+  offers.push({
+    offer: {
+      sdp: "asdfasdfasdfasdfasdfasdfasdf",
+      value: 1,
+    },
+    offer_id: "taasdfasdfasdfasd",
+  });
 }
 
 const closePromises = new Array<Promise<void>>();
@@ -38,84 +38,94 @@ const connectPromises = new Array<Promise<void>>();
 console.log("creating", peersCount, "connections");
 
 async function timeout(milliseconds: number) {
-    return new Promise<void>(resolve => setTimeout(resolve, milliseconds));
+  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 }
 
 async function main() {
-    try {
-        for (let p = 0; p < peersCount; p++) {
-            const webSocket = new WebSocket("ws://localhost:8000/");
+  try {
+    for (let p = 0; p < peersCount; p++) {
+      const webSocket = new WebSocket("ws://localhost:8000/");
 
-            closePromises.push(new Promise((resolve, reject) => {
-                webSocket.on("close", resolve);
-                webSocket.on("error", e => reject(new Error(`Socket closed ${e}`)));
-            }));
+      closePromises.push(
+        new Promise((resolve, reject) => {
+          webSocket.on("close", resolve);
+          webSocket.on("error", (e) => reject(new Error(`Socket closed ${e}`)));
+        }),
+      );
 
-            connectPromises.push(new Promise((resolve, reject) => {
-                webSocket.on("open", () => {
-                    try {
-                        webSocket.send(JSON.stringify({
-                            action: "announce",
-                            event: "started",
-                            info_hash: Math.floor(swarmsCount * Math.random()).toPrecision(19).toString(),
-                            peer_id: p.toPrecision(19).toString(),
-                            numwant: offersCount,
-                            offers: offers,
-                        }));
-                        resolve();
-                    } catch (e) {
-                        reject(new Error(`Send error ${e}`));
-                    }
-                });
-                webSocket.on("message", message => {
-                    const json = JSON.parse(message.toString()); // FIXME: may not work after dependencies update
+      connectPromises.push(
+        new Promise((resolve, reject) => {
+          webSocket.on("open", () => {
+            try {
+              webSocket.send(
+                JSON.stringify({
+                  action: "announce",
+                  event: "started",
+                  info_hash: Math.floor(swarmsCount * Math.random())
+                    .toPrecision(19)
+                    .toString(),
+                  peer_id: p.toPrecision(19).toString(),
+                  numwant: offersCount,
+                  offers: offers,
+                }),
+              );
+              resolve();
+            } catch (e) {
+              reject(new Error(`Send error ${e}`));
+            }
+          });
+          webSocket.on("message", (message) => {
+            const json = JSON.parse(message.toString()); // FIXME: may not work after dependencies update
 
-                    if (!json.offer) {
-                        return;
-                    }
+            if (!json.offer) {
+              return;
+            }
 
-                    try {
-                        webSocket.send(JSON.stringify({
-                            action: "announce",
-                            info_hash: json.info_hash,
-                            peer_id: p.toPrecision(19).toString(),
-                            to_peer_id: json.peer_id,
-                            answer: {
-                                type: "answer",
-                                sdp: "xxxxxxxxxxxx",
-                            },
-                        }));
-                    } catch (e) {
-                        reject(new Error(`Send error ${e}`));
-                    }
-                });
-                webSocket.on("close", () => reject(new Error("Socket closed")));
-                webSocket.on("error", e => reject(new Error(`Socket closed ${e}`)));
-            }));
+            try {
+              webSocket.send(
+                JSON.stringify({
+                  action: "announce",
+                  info_hash: json.info_hash,
+                  peer_id: p.toPrecision(19).toString(),
+                  to_peer_id: json.peer_id,
+                  answer: {
+                    type: "answer",
+                    sdp: "xxxxxxxxxxxx",
+                  },
+                }),
+              );
+            } catch (e) {
+              reject(new Error(`Send error ${e}`));
+            }
+          });
+          webSocket.on("close", () => reject(new Error("Socket closed")));
+          webSocket.on("error", (e) => reject(new Error(`Socket closed ${e}`)));
+        }),
+      );
 
-            await timeout(10);
-        }
-    } catch (e) {
-        console.log("faied to create WebSocket connections", e);
-        return;
+      await timeout(10);
     }
+  } catch (e) {
+    console.log("faied to create WebSocket connections", e);
+    return;
+  }
 
-    try {
-        await Promise.all(connectPromises);
-    } catch (e) {
-        console.log("socket error:", e);
-        return;
-    }
+  try {
+    await Promise.all(connectPromises);
+  } catch (e) {
+    console.log("socket error:", e);
+    return;
+  }
 
-    console.log("waiting for the connections to close");
+  console.log("waiting for the connections to close");
 
-    try {
-        await Promise.all(closePromises);
-    } catch (e) {
-        console.log("socket error:", e);
-    }
+  try {
+    await Promise.all(closePromises);
+  } catch (e) {
+    console.log("socket error:", e);
+  }
 
-    console.log("done");
+  console.log("done");
 }
 
 main();

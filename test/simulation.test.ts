@@ -19,87 +19,98 @@ import { PeerContext } from "../lib/tracker.js";
 import { expect } from "chai";
 
 describe("simulation", () => {
-    it("should pass random simulations", () => {
-        const simulationsCount = 1000;
-        const torrentsCount = 2;
-        const peersCount = 200;
-        const offersCount = 10;
-        const sameIdPeersRatio = 0.1;
+  it("should pass random simulations", () => {
+    const simulationsCount = 1000;
+    const torrentsCount = 2;
+    const peersCount = 200;
+    const offersCount = 10;
+    const sameIdPeersRatio = 0.1;
 
-        const tracker = new FastTracker();
+    const tracker = new FastTracker();
 
-        const peers: PeerContext[] = [];
-        const peersData: Array<{ infoHash?: string; peerId: string }> = [];
+    const peers: PeerContext[] = [];
+    const peersData: Array<{ infoHash?: string; peerId: string }> = [];
 
-        for (let i = 0; i < peersCount; i++) {
-            peers.push({
-                sendMessage: (json: any) => {},
-            });
-            peersData.push({ peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString() });
+    for (let i = 0; i < peersCount; i++) {
+      peers.push({
+        sendMessage: (json: any) => {},
+      });
+      peersData.push({
+        peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString(),
+      });
+    }
+
+    const announceMessage = {
+      action: "announce",
+      info_hash: "",
+      peer_id: "",
+      offers: new Array<any>(),
+      numwant: 100,
+    };
+
+    for (let i = 0; i < offersCount; i++) {
+      announceMessage.offers.push({
+        offer: { sdp: "x" },
+        offer_id: i.toString(),
+      });
+    }
+
+    function doIteration() {
+      const peerIndex = Math.floor(Math.random() * peers.length);
+      const peer = peers[peerIndex];
+      const peerData = peersData[peerIndex];
+
+      if (peerData.infoHash) {
+        // peer has been assigned to a torrent
+        const random = Math.random();
+        if (random < 0.05) {
+          // leave torrent
+          tracker.processMessage(
+            {
+              action: "announce",
+              event: "stopped",
+              info_hash: peerData.infoHash,
+              peer_id: peer.id,
+            },
+            peer,
+          );
+          peerData.infoHash = undefined;
+
+          return;
+        } else if (random < 0.06) {
+          // disconnect
+          tracker.disconnectPeer(peer);
+          peerData.infoHash = undefined;
+          peers[peerIndex] = { sendMessage: peer.sendMessage };
+          return;
+        } else {
+          // announce on the same torrent
+          announceMessage.peer_id = peerData.peerId;
+          announceMessage.info_hash = peerData.infoHash;
+          tracker.processMessage(announceMessage, peer);
+          return;
         }
+      }
 
-        const announceMessage = {
-            action: "announce",
-            info_hash: "",
-            peer_id: "",
-            offers: new Array<any>(),
-            numwant: 100,
-        };
+      // assign the peer to a torrent
+      announceMessage.peer_id = peerData.peerId;
+      announceMessage.info_hash = peerData.infoHash = Math.floor(
+        Math.random() * torrentsCount,
+      ).toString();
+      tracker.processMessage(announceMessage, peer);
+    }
 
-        for (let i = 0; i < offersCount; i++) {
-            announceMessage.offers.push({
-                offer: { sdp: "x" },
-                offer_id: i.toString(),
-            });
-        }
+    for (let s = 0; s < simulationsCount; s++) {
+      doIteration();
+    }
 
-        function doIteration() {
-            const peerIndex = Math.floor(Math.random() * peers.length);
-            const peer = peers[peerIndex];
-            const peerData = peersData[peerIndex];
-
-            if (peerData.infoHash) { // peer has been assigned to a torrent
-                const random = Math.random();
-                if (random < 0.05) { // leave torrent
-                    tracker.processMessage({
-                        action: "announce",
-                        event: "stopped",
-                        info_hash: peerData.infoHash,
-                        peer_id: peer.id,
-                    }, peer);
-                    peerData.infoHash = undefined;
-
-                    return;
-                } else if (random < 0.06) { // disconnect
-                    tracker.disconnectPeer(peer);
-                    peerData.infoHash = undefined;
-                    peers[peerIndex] = { sendMessage: peer.sendMessage };
-                    return;
-                } else { // announce on the same torrent
-                    announceMessage.peer_id = peerData.peerId;
-                    announceMessage.info_hash = peerData.infoHash;
-                    tracker.processMessage(announceMessage, peer);
-                    return;
-                }
-            }
-
-            // assign the peer to a torrent
-            announceMessage.peer_id = peerData.peerId;
-            announceMessage.info_hash = peerData.infoHash = Math.floor(Math.random() * torrentsCount).toString();
-            tracker.processMessage(announceMessage, peer);
-        }
-
-        for (let s = 0; s < simulationsCount; s++) {
-            doIteration();
-        }
-
-        for (const [swarmId, swarm] of tracker.swarms) {
-            expect(swarm.peers).to.be.not.empty;
-            for (const peer of swarm.peers.values()) {
-                const peerData = peersData[peers.indexOf(peer)];
-                expect(peerData).to.exist;
-                expect(peerData.infoHash).to.be.equal(swarmId);
-            }
-        }
-    });
+    for (const [swarmId, swarm] of tracker.swarms) {
+      expect(swarm.peers).to.be.not.empty;
+      for (const peer of swarm.peers.values()) {
+        const peerData = peersData[peers.indexOf(peer)];
+        expect(peerData).to.exist;
+        expect(peerData.infoHash).to.be.equal(swarmId);
+      }
+    }
+  });
 });

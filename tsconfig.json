@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "NodeNext",
-    "lib": [ "ES2020" ],
+    "lib": ["ES2020"],
     "moduleResolution": "NodeNext",
     "declaration": true,
     "outDir": "./dist",
@@ -12,12 +12,8 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "types": [
-      "node",
-    ],
+    "types": ["node"]
   },
   "compileOnSave": true,
-  "include": [
-    "lib/**/*",
-  ],
+  "include": ["lib/**/*"]
 }

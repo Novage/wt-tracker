@@ -21,61 +21,69 @@ const peersCount = 100000;
 const swarmsCount = 1000000000;
 
 const message = {
-    action: "announce",
-    event: "started",
-    info_hash: "hash",
-    peer_id: "",
-    offers: new Array<unknown>(),
-    numwant: 10,
+  action: "announce",
+  event: "started",
+  info_hash: "hash",
+  peer_id: "",
+  offers: new Array<unknown>(),
+  numwant: 10,
 };
 
 for (let o = 0; o < message.numwant; o++) {
-    message.offers.push({
-        offer: {
-            sdp: "x",
-            value: 1,
-        },
-        offer_id: "t",
-    });
+  message.offers.push({
+    offer: {
+      sdp: "x",
+      value: 1,
+    },
+    offer_id: "t",
+  });
 }
 
 const tracker = new FastTracker();
 
 console.log("heap", process.memoryUsage());
-console.log("bytes per peer in average: " + process.memoryUsage().heapUsed / peersCount);
+console.log(
+  "bytes per peer in average: " + process.memoryUsage().heapUsed / peersCount,
+);
 console.log("\nadding peers to swarms");
 
 const peers: PeerContext[] = [];
 for (let p = 0; p < peersCount; p++) {
-    message.peer_id = p.toPrecision(19).toString();
-    message.info_hash = Math.floor(swarmsCount * Math.random()).toPrecision(19).toString();
-    const peer = {
-        sendMessage: () => p,
-    };
-    tracker.processMessage(message, peer);
-    peers.push(peer);
+  message.peer_id = p.toPrecision(19).toString();
+  message.info_hash = Math.floor(swarmsCount * Math.random())
+    .toPrecision(19)
+    .toString();
+  const peer = {
+    sendMessage: () => p,
+  };
+  tracker.processMessage(message, peer);
+  peers.push(peer);
 }
 
 let peersCountAfter = 0;
 for (const swarm of tracker.swarms.values()) {
-    peersCountAfter += swarm.peers.length;
+  peersCountAfter += swarm.peers.length;
 }
 
 console.log("swarms:", tracker.swarms.size, "peers:", peersCountAfter);
 console.log("heap:", process.memoryUsage());
-console.log("bytes per peer in average: " + process.memoryUsage().heapUsed / peersCount);
+console.log(
+  "bytes per peer in average: " + process.memoryUsage().heapUsed / peersCount,
+);
 
 console.log("\nremoving peers");
 
 for (const peer of peers) {
-    tracker.disconnectPeer(peer);
+  tracker.disconnectPeer(peer);
 }
 
 peers.length = 0;
 
 if (global.gc) {
-    global.gc();
+  global.gc();
 }
 
 console.log("heap:", process.memoryUsage());
-console.log("bytes per peer in average:" + process.memoryUsage().heapUsed / peersCount);
+console.log(
+  "bytes per peer in average:" + process.memoryUsage().heapUsed / peersCount,
+);

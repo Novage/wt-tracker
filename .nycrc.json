@@ -1,8 +1,5 @@
 {
-    "cache": false,
-    "extension": [".ts"],
-    "include": [
-      "lib/**/*.ts",
-      "test_dist/**/*.js"
-    ]
+  "cache": false,
+  "extension": [".ts"],
+  "include": ["lib/**/*.ts", "test_dist/**/*.js"]
 }
