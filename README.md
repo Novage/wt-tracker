@@ -1,4 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/Novage/wt-tracker/badge.svg?branch=master)](https://coveralls.io/github/Novage/wt-tracker?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/Novage/wt-tracker/badge.svg?branch=main)](https://coveralls.io/github/Novage/wt-tracker?branch=main)
 
 # wt-tracker
 
