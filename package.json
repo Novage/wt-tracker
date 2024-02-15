@@ -32,12 +32,10 @@
     "lint": "eslint --ext .ts -f visualstudio lib",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
-    "test": "npm run test:clean && npm run test:compile && npm run test:run",
-    "test:run": "nyc mocha test_dist/**/*.test.js",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:compile": "tsc --project tsconfig.test.json",
-    "test:clean": "rimraf test_dist",
-    "test:coverage": "nyc report --reporter=lcov --reporter=text",
-    "test:coveralls": "nyc report --reporter=text-lcov | coveralls"
+    "test:clean": "rimraf test_dist"
   },
   "repository": {
     "type": "git",
@@ -55,15 +53,13 @@
     "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
-    "chai": "^5.1.0",
-    "coveralls": "^3.1.1",
+    "@vitest/coverage-v8": "^1.2.2",
     "eslint": "^8.56.0",
-    "mocha": "^10.3.0",
-    "nyc": "^15.1.0",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
     "ts-mockito": "^2.6.1",
     "typescript": "^5.3.3",
+    "vitest": "^1.2.2",
     "ws": "^8.16.0"
   }
 }

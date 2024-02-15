@@ -16,7 +16,8 @@
 
 import { FastTracker } from "../lib/fast-tracker.js";
 import { PeerContext } from "../lib/tracker.js";
-import { expect } from "chai";
+import { describe, it, expect } from "vitest";
+
 import {
   mock,
   instance,
