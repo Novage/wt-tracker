@@ -21,7 +21,7 @@ import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import Debug from "debug";
 import { UWebSocketsTracker } from "./uws-tracker.js";
 import { FastTracker } from "./fast-tracker.js";
-import { Tracker } from "./tracker.js";
+import { PeerContext, Tracker } from "./tracker.js";
 
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
@@ -204,6 +204,11 @@ async function runServers(tracker: Tracker, settings: Settings): Promise<void> {
   await Promise.all(serverPromises);
 }
 
+interface ExtendedSwarm {
+  peers: readonly PeerContext[];
+  infoHash: string;
+}
+
 function buildServer({
   tracker,
   serverSettings,
@@ -236,10 +241,17 @@ function buildServer({
     .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
       debugRequest(server, request);
 
-      const { swarms } = tracker;
+      const swarms = tracker.swarms;
+      const peerCountPerInfoHash: Record<string, number> = {};
+
       let peersCount = 0;
-      for (const swarm of swarms.values()) {
+      for (const swarm of swarms.values() as unknown as ExtendedSwarm[]) {
         peersCount += swarm.peers.length;
+
+        const infoHashHex = Buffer.from(swarm.infoHash, "binary").toString(
+          "hex",
+        );
+        peerCountPerInfoHash[infoHashHex] = peersCount;
       }
 
       const serversStats = new Array<{
@@ -260,6 +272,7 @@ function buildServer({
           peersCount: peersCount,
           servers: serversStats,
           memory: process.memoryUsage(),
+          peerCountPerInfoHash,
         }),
       );
     })
