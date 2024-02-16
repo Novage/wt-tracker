@@ -21,7 +21,7 @@ import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import Debug from "debug";
 import { UWebSocketsTracker } from "./uws-tracker.js";
 import { FastTracker } from "./fast-tracker.js";
-import { PeerContext, Tracker } from "./tracker.js";
+import { Tracker } from "./tracker.js";
 
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
@@ -167,7 +167,7 @@ function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
   }
 
   return {
-    servers: servers,
+    servers,
     tracker: jsonSettings.tracker,
     websocketsAccess: jsonSettings.websocketsAccess,
   };
@@ -188,11 +188,11 @@ async function runServers(tracker: Tracker, settings: Settings): Promise<void> {
 
   const serverPromises = settings.servers.map(async (serverSettings) => {
     const server = buildServer({
-      tracker: tracker,
-      serverSettings: serverSettings,
+      tracker,
+      serverSettings,
       websocketsAccess: settings.websocketsAccess,
-      indexHtml: indexHtml,
-      servers: servers,
+      indexHtml,
+      servers,
     });
     servers.push(server);
     await server.run();
@@ -202,11 +202,6 @@ async function runServers(tracker: Tracker, settings: Settings): Promise<void> {
   });
 
   await Promise.all(serverPromises);
-}
-
-interface ExtendedSwarm {
-  peers: readonly PeerContext[];
-  infoHash: string;
 }
 
 function buildServer({
@@ -242,16 +237,14 @@ function buildServer({
       debugRequest(server, request);
 
       const swarms = tracker.swarms;
-      const peerCountPerInfoHash: Record<string, number> = {};
+      const peersCountPerInfoHash: Record<string, number> = {};
 
       let peersCount = 0;
-      for (const swarm of swarms.values() as unknown as ExtendedSwarm[]) {
+      for (const [infoHash, swarm] of swarms) {
         peersCount += swarm.peers.length;
 
-        const infoHashHex = Buffer.from(swarm.infoHash, "binary").toString(
-          "hex",
-        );
-        peerCountPerInfoHash[infoHashHex] = peersCount;
+        const infoHashHex = Buffer.from(infoHash, "binary").toString("hex");
+        peersCountPerInfoHash[infoHashHex] = peersCount;
       }
 
       const serversStats = new Array<{
@@ -269,10 +262,10 @@ function buildServer({
       response.writeHeader("Content-Type", "application/json").end(
         JSON.stringify({
           torrentsCount: swarms.size,
-          peersCount: peersCount,
+          peersCount,
           servers: serversStats,
           memory: process.memoryUsage(),
-          peerCountPerInfoHash,
+          peersCountPerInfoHash,
         }),
       );
     })

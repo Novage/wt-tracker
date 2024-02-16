@@ -394,7 +394,7 @@ export class FastTracker implements Tracker {
       }
     }
 
-    peer.sendMessage({ action: "scrape", files: files }, peer);
+    peer.sendMessage({ action: "scrape", files }, peer);
   }
 }
 
