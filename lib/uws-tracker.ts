@@ -312,7 +312,7 @@ export class UWebSocketsTracker {
         "in",
         userData.id === undefined
           ? "unknown peer"
-          : Buffer.from(userData.id!).toString("hex"),
+          : Buffer.from(userData.id).toString("hex"),
         json,
       );
     }
@@ -350,7 +350,7 @@ function sendMessage(json: object, peerContext: PeerContext): void {
       "out",
       peerContext.id === undefined
         ? "unknown peer"
-        : Buffer.from(peerContext.id!).toString("hex"),
+        : Buffer.from(peerContext.id).toString("hex"),
       json,
     );
   }

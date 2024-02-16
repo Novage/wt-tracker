@@ -29,7 +29,7 @@
     "start": "node ./dist/run-uws-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
-    "lint": "eslint --ext .ts -f visualstudio lib",
+    "lint": "eslint --ext .ts lib",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
     "test": "vitest",
