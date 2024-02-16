@@ -1,3 +1,4 @@
+[![Build Status](https://github.com/Novage/wt-tracker/actions/workflows/main.yml/badge.svg)](https://github.com/Novage/wt-tracker/actions/workflows/main.yml)
 [![Coverage Status](https://coveralls.io/repos/github/Novage/wt-tracker/badge.svg?branch=main)](https://coveralls.io/github/Novage/wt-tracker?branch=main)
 
 # wt-tracker
