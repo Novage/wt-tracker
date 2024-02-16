@@ -136,7 +136,7 @@ function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
   } else {
     for (const serverSettings of jsonSettings.servers) {
       if (serverSettings instanceof Object) {
-        servers.push(serverSettings);
+        servers.push(serverSettings as object);
       } else {
         console.error(
           "failed to parse JSON configuration file: 'servers' property should be an array of objects",
@@ -302,4 +302,4 @@ async function run(): Promise<void> {
   }
 }
 
-run();
+await run();
