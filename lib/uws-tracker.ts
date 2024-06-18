@@ -25,7 +25,7 @@ import {
   HttpResponse,
 } from "uWebSockets.js";
 import Debug from "debug";
-import { Tracker, TrackerError, PeerContext } from "./tracker.js";
+import { Tracker, TrackerError, SocketContext } from "./tracker.js";
 import {
   ServerSettings,
   WebSocketsSettings,
@@ -33,8 +33,8 @@ import {
 } from "./run-uws-tracker.js";
 
 declare module "./tracker.js" {
-  interface PeerContext {
-    ws: WebSocket<PeerContext>;
+  interface SocketContext {
+    ws: WebSocket<SocketContext>;
   }
 }
 
@@ -186,7 +186,7 @@ export class UWebSocketsTracker {
       idleTimeout: this.settings.websockets.idleTimeout,
       open: this.onOpen,
       upgrade: this.onUpgrade,
-      drain: (ws: WebSocket<PeerContext>) => {
+      drain: (ws: WebSocket<SocketContext>) => {
         if (debugWebSocketsEnabled) {
           debugWebSockets("drain", ws.getBufferedAmount());
         }
@@ -276,7 +276,7 @@ export class UWebSocketsTracker {
       );
     }
 
-    response.upgrade<Pick<PeerContext, "sendMessage">>(
+    response.upgrade<Pick<SocketContext, "sendMessage">>(
       {
         sendMessage,
       },
@@ -288,7 +288,7 @@ export class UWebSocketsTracker {
   };
 
   private readonly onMessage = (
-    ws: WebSocket<PeerContext>,
+    ws: WebSocket<SocketContext>,
     message: ArrayBuffer,
   ): void => {
     debugWebSockets("message of size", message.byteLength);
@@ -308,13 +308,13 @@ export class UWebSocketsTracker {
     }
 
     if (debugMessagesEnabled) {
-      debugMessages(
+      /* debugMessages(
         "in",
         userData.id === undefined
           ? "unknown peer"
           : Buffer.from(userData.id).toString("hex"),
         json,
-      );
+      );*/
     }
 
     try {
@@ -330,28 +330,28 @@ export class UWebSocketsTracker {
   };
 
   private readonly onClose = (
-    ws: WebSocket<PeerContext>,
+    ws: WebSocket<SocketContext>,
     code: number,
   ): void => {
     this.webSocketsCount--;
 
     if (ws.getUserData().sendMessage !== undefined) {
-      this.tracker.disconnectPeer(ws as unknown as PeerContext);
+      this.tracker.disconnectPeer(ws as unknown as SocketContext);
     }
 
     debugWebSockets("closed with code", code);
   };
 }
 
-function sendMessage(json: object, peerContext: PeerContext): void {
+function sendMessage(json: object, peerContext: SocketContext): void {
   peerContext.ws.send(JSON.stringify(json), false, false);
   if (debugMessagesEnabled) {
-    debugMessages(
+    /* debugMessages(
       "out",
       peerContext.id === undefined
         ? "unknown peer"
         : Buffer.from(peerContext.id).toString("hex"),
       json,
-    );
+    );*/
   }
 }

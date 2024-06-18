@@ -17,4 +17,8 @@
 
 export type { UWebSocketsTracker } from "./uws-tracker.js";
 export type { FastTracker } from "./fast-tracker.js";
-export type { Tracker, PeerContext, TrackerError } from "./tracker.js";
+export type {
+  Tracker,
+  SocketContext as PeerContext,
+  TrackerError,
+} from "./tracker.js";
