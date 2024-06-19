@@ -79,31 +79,20 @@ export class FastTracker implements Tracker {
   }
 
   public disconnectPeer(peerSocket: SocketContext): void {
-    for (const peerId of peerSocket.peerIdsOnSocket) {
-      if (peerId === undefined) {
-        continue;
-      }
+    const hashesToDelete: string[] = [];
 
-      const peer = this.#peersContext.get(peerId);
-      if (peer === undefined) {
-        continue;
-      }
+    for (const infoHash in peerSocket) {
+      const swarm = (peerSocket as unknown as UnknownObject)[infoHash];
 
-      if (debugEnabled) {
-        debug("disconnect peer:", Buffer.from(peerId).toString("hex"));
-      }
+      if (!(swarm instanceof Swarm)) continue;
 
-      for (const infoHash in peerSocket) {
-        const swarm = (peerSocket as unknown as UnknownObject)[infoHash];
+      for (const peerId of peerSocket.peerIdsOnSocket) {
+        const peer = this.#peersContext.get(peerId);
+        if (peer === undefined) continue;
 
-        if (!(swarm instanceof Swarm)) {
-          continue;
-        }
+        const isPeerRemoved = swarm.removePeer(peer);
 
-        swarm.removePeer(peer);
-        delete (peerSocket as unknown as UnknownObject)[infoHash];
-
-        if (debugEnabled) {
+        if (debugEnabled && isPeerRemoved) {
           debug(
             "disconnect peer: peer",
             Buffer.from(peerId).toString("hex"),
@@ -111,20 +100,32 @@ export class FastTracker implements Tracker {
             Buffer.from(infoHash).toString("hex"),
           );
         }
-
-        if (swarm.peers.length === 0) {
-          if (debugEnabled) {
-            debug(
-              "disconnect peer: swarm removed (empty)",
-              Buffer.from(swarm.infoHash).toString("hex"),
-            );
-          }
-          this.#swarms.delete(swarm.infoHash);
-        }
       }
 
+      hashesToDelete.push(infoHash);
+
+      if (swarm.peers.length === 0) {
+        if (debugEnabled) {
+          debug(
+            "disconnect peer: swarm removed (empty)",
+            Buffer.from(swarm.infoHash).toString("hex"),
+          );
+        }
+        this.#swarms.delete(swarm.infoHash);
+      }
+    }
+
+    if (hashesToDelete.length === 0) return;
+
+    for (const infoHash of hashesToDelete) {
+      delete (peerSocket as unknown as UnknownObject)[infoHash];
+    }
+
+    for (const peerId of peerSocket.peerIdsOnSocket) {
       this.#peersContext.delete(peerId);
     }
+
+    peerSocket.peerIdsOnSocket.clear();
   }
 
   private processAnnounce(
@@ -441,8 +442,10 @@ class Swarm {
     }
   }
 
-  public removePeer(peer: PeerContext): void {
+  public removePeer(peer: PeerContext): boolean {
     const index = this.#peers.indexOf(peer);
+
+    if (index === -1) return false;
 
     if (this.completedPeers?.delete(peer.id) === true) {
       this.completedCount--;
@@ -453,6 +456,8 @@ class Swarm {
     if (index < this.#peers.length) {
       this.#peers[index] = last;
     }
+
+    return true;
   }
 
   public setCompleted(peer: PeerContext): void {
