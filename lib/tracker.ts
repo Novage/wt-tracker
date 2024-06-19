@@ -25,6 +25,7 @@ export interface PeerContext {
   id: string;
   sendMessage: (json: object, peer: SocketContext) => void;
   ws: WebSocket<SocketContext>;
+  lastAccessed: number;
 }
 
 export interface Tracker {

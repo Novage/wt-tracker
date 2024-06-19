@@ -38,12 +38,29 @@ export class FastTracker implements Tracker {
   readonly #swarms = new Map<string, Swarm>();
   readonly #peersContext = new Map<string, PeerContext>();
 
+  private clearPeersInterval?: NodeJS.Timeout;
+
   public constructor(settings?: Partial<Settings>) {
     this.settings = {
       maxOffers: 20,
       announceInterval: 120,
       ...settings,
     };
+    this.startClearPeersInterval();
+  }
+
+  private startClearPeersInterval(): void {
+    if (this.clearPeersInterval === undefined) {
+      this.clearPeersInterval = setInterval(() => {
+        const now = performance.now();
+        for (const peer of this.#peersContext.values()) {
+          if (now - peer.lastAccessed > this.settings.announceInterval * 2) {
+            // TODO: disconnect only current peer
+            this.disconnectPeer(peer.ws as unknown as SocketContext);
+          }
+        }
+      }, this.settings.announceInterval * 1000);
+    }
   }
 
   public get swarms(): ReadonlyMap<string, { peers: readonly PeerContext[] }> {
@@ -146,6 +163,7 @@ export class FastTracker implements Tracker {
       id: peerId,
       sendMessage: peer.sendMessage,
       ws: peer.ws,
+      lastAccessed: performance.now(),
     };
 
     this.#peersContext.set(peerId, peerContext);
