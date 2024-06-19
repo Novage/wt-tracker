@@ -36,7 +36,6 @@ export class FastTracker implements Tracker {
   public readonly settings: Settings;
 
   readonly #swarms = new Map<string, Swarm>();
-  readonly #peers = new Map<string, SocketContext>();
   readonly #peersContext = new Map<string, PeerContext>();
 
   public constructor(settings?: Partial<Settings>) {
@@ -80,7 +79,7 @@ export class FastTracker implements Tracker {
   }
 
   public disconnectPeer(peerSocket: SocketContext): void {
-    for (const peerId in peerSocket.peerIdsOnSocket) {
+    for (const peerId of peerSocket.peerIdsOnSocket) {
       if (peerId === undefined) {
         continue;
       }
@@ -124,7 +123,6 @@ export class FastTracker implements Tracker {
         }
       }
 
-      this.#peers.delete(peerId);
       this.#peersContext.delete(peerId);
     }
   }
@@ -144,11 +142,10 @@ export class FastTracker implements Tracker {
       ws: peer.ws,
     };
 
-    this.#peers.set(peerId, peer);
     this.#peersContext.set(peerId, peerContext);
 
     if (peer.peerIdsOnSocket === undefined) {
-      peer.peerIdsOnSocket = new Set(peerId);
+      peer.peerIdsOnSocket = new Set([peerId]);
     }
     peer.peerIdsOnSocket.add(peerId);
 
@@ -309,13 +306,14 @@ export class FastTracker implements Tracker {
 
   private processAnswer(json: UnknownObject): void {
     const toPeerId = json.to_peer_id as string;
-    const toPeer = this.#peers.get(toPeerId);
+    // const toPeer = this.#peers.get(toPeerId);
+    const toPeer = this.#peersContext.get(toPeerId);
     if (toPeer === undefined) {
       throw new TrackerError("answer: to_peer_id is not in the swarm");
     }
 
     delete json.to_peer_id;
-    toPeer.sendMessage(json, toPeer);
+    toPeer.sendMessage(json, toPeer as unknown as SocketContext);
 
     if (debugEnabled) {
       debug(
