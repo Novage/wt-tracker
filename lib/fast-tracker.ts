@@ -136,6 +136,11 @@ export class FastTracker implements Tracker {
     const peerId = json.peer_id as string;
     let swarm: unknown = undefined;
 
+    if (peer.peerIdsOnSocket === undefined) {
+      peer.peerIdsOnSocket = new Set([peerId]);
+    }
+    peer.peerIdsOnSocket.add(peerId);
+
     const peerContext: PeerContext = {
       id: peerId,
       sendMessage: peer.sendMessage,
@@ -143,11 +148,6 @@ export class FastTracker implements Tracker {
     };
 
     this.#peersContext.set(peerId, peerContext);
-
-    if (peer.peerIdsOnSocket === undefined) {
-      peer.peerIdsOnSocket = new Set([peerId]);
-    }
-    peer.peerIdsOnSocket.add(peerId);
 
     swarm = (peer as unknown as UnknownObject)[infoHash as string];
 
@@ -306,7 +306,6 @@ export class FastTracker implements Tracker {
 
   private processAnswer(json: UnknownObject): void {
     const toPeerId = json.to_peer_id as string;
-    // const toPeer = this.#peers.get(toPeerId);
     const toPeer = this.#peersContext.get(toPeerId);
     if (toPeer === undefined) {
       throw new TrackerError("answer: to_peer_id is not in the swarm");
@@ -324,38 +323,43 @@ export class FastTracker implements Tracker {
       );
     }
   }
-  // TODO: Implement the processStop method
-  private processStop(json: UnknownObject, peer: SocketContext): void {
-    // needs debug
-    // const peerIdToClose = json.peer_id as string;
-    const infoHash = json.info_hash;
-    const swarm = (peer as unknown as UnknownObject)[infoHash as string];
+
+  private processStop(json: UnknownObject, peerSocket: SocketContext): void {
+    const peerId = json.peer_id as string;
+    const infoHash = json.info_hash as string;
+
+    const peer = this.#peersContext.get(peerId);
+    if (peer === undefined) return;
+
+    const swarm = (peerSocket as unknown as UnknownObject)[infoHash];
 
     if (!(swarm instanceof Swarm)) {
-      debug("stop event: peer not in the swarm");
-      return;
+      throw new TrackerError("stop: peer is not in the swarm");
     }
+
+    swarm.removePeer(peer);
+    delete (peerSocket as unknown as UnknownObject)[infoHash];
 
     if (debugEnabled) {
       debug(
-        "stop event: peer",
-        Buffer.from("peer.id").toString("hex"),
+        "stop: peer",
+        Buffer.from(peerId).toString("hex"),
         "removed from swarm",
-        Buffer.from(infoHash as string).toString("hex"),
+        Buffer.from(infoHash).toString("hex"),
       );
     }
-    // swarm.removePeer(peer);
-    delete (peer as unknown as UnknownObject)[infoHash as string];
 
     if (swarm.peers.length === 0) {
       if (debugEnabled) {
         debug(
-          "stop event: swarm removed (empty)",
-          Buffer.from(infoHash as string).toString("hex"),
+          "stop: swarm removed (empty)",
+          Buffer.from(swarm.infoHash).toString("hex"),
         );
       }
-      this.#swarms.delete(infoHash as string);
+      this.#swarms.delete(swarm.infoHash);
     }
+
+    this.#peersContext.delete(peerId);
   }
 
   private processScrape(json: UnknownObject, peer: SocketContext): void {
