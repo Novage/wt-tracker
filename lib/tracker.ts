@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
-import { WebSocket } from "uWebSockets.js";
-
 export interface SocketContext {
   sendMessage: (json: object, peer: SocketContext) => void;
-  peerIdsOnSocket: Set<string>;
 }
 
 export interface PeerContext {
-  id: string;
+  peerId: string;
   sendMessage: (json: object, peer: SocketContext) => void;
-  ws: WebSocket<SocketContext>;
+  socketContext: SocketContext;
   lastAccessed: number;
+  swarmInfoHash: string;
 }
 
 export interface Tracker {
   readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
   readonly settings: object;
   processMessage: (json: object, peer: SocketContext) => void;
-  disconnectPeer: (peer: SocketContext) => void;
+  disconnectPeersFromSocket: (peer: SocketContext) => void;
 }
 
 export class TrackerError extends Error {}

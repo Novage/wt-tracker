@@ -276,7 +276,7 @@ export class UWebSocketsTracker {
       );
     }
 
-    response.upgrade<Pick<SocketContext, "sendMessage">>(
+    response.upgrade<Omit<SocketContext, "ws">>(
       {
         sendMessage,
       },
@@ -336,7 +336,7 @@ export class UWebSocketsTracker {
     this.webSocketsCount--;
 
     if (ws.getUserData().sendMessage !== undefined) {
-      this.tracker.disconnectPeer(ws as unknown as SocketContext);
+      this.tracker.disconnectPeersFromSocket(ws as unknown as SocketContext);
     }
 
     debugWebSockets("closed with code", code);
