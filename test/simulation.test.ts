@@ -15,7 +15,7 @@
  */
 
 import { FastTracker } from "../lib/fast-tracker.js";
-import { PeerContext } from "../lib/tracker.js";
+import { SocketContext } from "../lib/tracker.js";
 import { describe, it, expect } from "vitest";
 
 describe("simulation", () => {
@@ -28,12 +28,13 @@ describe("simulation", () => {
 
     const tracker = new FastTracker();
 
-    const peers: PeerContext[] = [];
+    const peers: SocketContext[] = [];
     const peersData: Array<{ infoHash?: string; peerId: string }> = [];
 
     for (let i = 0; i < peersCount; i++) {
       peers.push({
-        sendMessage: (json: any) => {},
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        sendMessage: (_json: object, _peer: SocketContext) => {},
       });
       peersData.push({
         peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString(),
@@ -44,7 +45,7 @@ describe("simulation", () => {
       action: "announce",
       info_hash: "",
       peer_id: "",
-      offers: new Array<any>(),
+      offers: new Array<unknown>(),
       numwant: 100,
     };
 
@@ -70,7 +71,7 @@ describe("simulation", () => {
               action: "announce",
               event: "stopped",
               info_hash: peerData.infoHash,
-              peer_id: peer.id,
+              peer_id: peerData.peerId,
             },
             peer,
           );
@@ -107,9 +108,12 @@ describe("simulation", () => {
     for (const [swarmId, swarm] of tracker.swarms) {
       expect(swarm.peers).to.be.not.empty;
       for (const peer of swarm.peers.values()) {
-        const peerData = peersData[peers.indexOf(peer)];
+        const peerData = peersData.find(
+          (pd) => pd.peerId === peer.peerId && pd.infoHash === swarmId,
+        );
+
         expect(peerData).to.exist;
-        expect(peerData.infoHash).to.be.equal(swarmId);
+        expect(peerData?.infoHash).to.be.equal(swarmId);
       }
     }
   });
