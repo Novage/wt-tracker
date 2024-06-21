@@ -2,7 +2,7 @@
   "servers": [
     {
       "server": {
-        "port": 8000,
+        "port": 80,
         "host": "0.0.0.0"
       },
       "websockets": {
@@ -15,12 +15,11 @@
     },
     {
       "server": {
-        "port": 8433,
+        "port": 443,
         "host": "0.0.0.0",
-        "key_file_name": "misc/key.pem",
-        "cert_file_name": "misc/cert.pem",
-        "passphrase": "1234",
-        "dh_params_file_name": "misc/params.dh",
+        "key_file_name": "/home/ubuntu/trackers/certs/live/tracker.novage.com.ua/privkey.pem",
+        "cert_file_name": "/home/ubuntu/trackers/certs/live/tracker.novage.com.ua/fullchain.pem",
+        "dh_params_file_name": "/home/ubuntu/trackers/certs/live/tracker.novage.com.ua/dhparam.pem",
         "ssl_prefer_low_memory_usage": true
       },
       "websockets": {
@@ -38,8 +37,6 @@
   },
 
   "websocketsAccess": {
-    "allowOrigins": ["https://xxx.com", "https://yyy.com"],
-    "denyOrigins": ["https://xxx.com", "https://yyy.com"],
-    "denyEmptyOrigin": true
+    "denyEmptyOrigin": false
   }
 }
