@@ -38,7 +38,7 @@ export class FastTracker implements Tracker {
   readonly #swarms = new Map<string, Swarm>();
   readonly #peersContext = new Map<string, PeerContext>();
 
-  private clearPeersInterval?: NodeJS.Timeout;
+  #clearPeersInterval?: NodeJS.Timeout;
 
   public constructor(settings?: Partial<Settings>) {
     this.settings = {
@@ -50,19 +50,22 @@ export class FastTracker implements Tracker {
   }
 
   private startClearPeersInterval(): void {
-    if (this.clearPeersInterval === undefined) {
-      this.clearPeersInterval = setInterval(() => {
-        const now = performance.now();
-        for (const peer of this.#peersContext.values()) {
-          if (
-            now - peer.lastAccessed >
-            this.settings.announceInterval * 2 * 1000
-          ) {
-            this.removePeer(peer);
-          }
-        }
-      }, this.settings.announceInterval * 1000);
+    if (this.#clearPeersInterval !== undefined) {
+      clearInterval(this.#clearPeersInterval);
+      this.#clearPeersInterval = undefined;
     }
+
+    this.#clearPeersInterval = setInterval(() => {
+      const now = performance.now();
+      for (const peer of this.#peersContext.values()) {
+        if (
+          now - peer.lastAccessed >
+          this.settings.announceInterval * 2 * 1000
+        ) {
+          this.removePeer(peer);
+        }
+      }
+    }, this.settings.announceInterval * 1000);
   }
 
   private removeEmptySwarm(swarm: Swarm) {
@@ -78,30 +81,30 @@ export class FastTracker implements Tracker {
   }
 
   private removePeer(peerContext: PeerContext) {
-    const swarm = this.#swarms.get(peerContext.swarmInfoHash);
+    const swarm = peerContext.swarm;
 
     if (swarm === undefined) {
       throw new TrackerError("disconnect peer: swarm is undefined");
+    }
+
+    if (debugEnabled) {
+      debug(
+        "disconnect peer: peer",
+        Buffer.from(peerContext.peerId).toString("hex"),
+        "removed from swarm",
+        Buffer.from(swarm.infoHash).toString("hex"),
+      );
     }
 
     swarm.removePeer(peerContext);
 
     this.removeEmptySwarm(swarm);
 
-    const peerId = peerContext.peerId;
+    this.#peersContext.delete(peerContext.peerId);
 
-    if (debugEnabled) {
-      debug(
-        "disconnect peer: peer",
-        Buffer.from(peerId).toString("hex"),
-        "removed from swarm",
-        Buffer.from(swarm.infoHash).toString("hex"),
-      );
-    }
-
-    this.#peersContext.delete(peerId);
-
-    delete (peerContext.socketContext as unknown as UnknownObject)[peerId];
+    delete (peerContext.socketContext as unknown as UnknownObject)[
+      peerContext.peerId
+    ];
   }
 
   public get swarms(): ReadonlyMap<string, { peers: readonly PeerContext[] }> {
@@ -171,18 +174,23 @@ export class FastTracker implements Tracker {
         sendMessage: peer.sendMessage,
         socketContext: peer,
         lastAccessed: performance.now(),
-        swarmInfoHash: infoHash,
       };
 
       swarm = this.addPeerToSwarm(peer, peerContext, infoHash, isPeerCompleted);
+
+      peerContext.swarm = swarm;
 
       (peer as unknown as UnknownObject)[peerId] = peerContext;
       this.#peersContext.set(peerId, peerContext);
     } else if (peerContext.peerId === peerId) {
       peerContext.lastAccessed = performance.now();
 
-      if (infoHash !== peerContext.swarmInfoHash) {
-        const oldSwarm = this.#swarms.get(peerContext.swarmInfoHash);
+      if (peerContext.swarm === undefined) {
+        throw new TrackerError("announce: peerContext.swarm is undefined");
+      }
+
+      if (infoHash !== peerContext.swarm.infoHash) {
+        const oldSwarm = this.#swarms.get(peerContext.swarm.infoHash);
 
         if (oldSwarm === undefined) {
           throw new TrackerError("announce: old swarm is undefined");
@@ -192,25 +200,21 @@ export class FastTracker implements Tracker {
 
         this.removeEmptySwarm(oldSwarm);
 
-        peerContext.swarmInfoHash = infoHash;
         swarm = this.addPeerToSwarm(
           peer,
           peerContext,
           infoHash,
           isPeerCompleted,
         );
+        peerContext.swarm = swarm;
       } else {
-        swarm = this.#swarms.get(peerContext.swarmInfoHash);
-
-        if (swarm === undefined) {
-          throw new TrackerError("announce: swarm is undefined");
-        }
+        swarm = peerContext.swarm;
 
         if (isPeerCompleted) swarm.setCompleted(peerContext);
       }
-    } else {
-      throw new TrackerError("announce: peerId mismatch");
     }
+
+    if (swarm === undefined) return;
 
     peer.sendMessage(
       {
@@ -417,7 +421,7 @@ export class FastTracker implements Tracker {
   }
 }
 
-class Swarm {
+export class Swarm {
   public completedCount = 0;
   private completedPeers?: Set<string>;
 
