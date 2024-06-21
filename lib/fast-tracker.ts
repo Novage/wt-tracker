@@ -20,6 +20,7 @@ import {
   SocketContext,
   PeerContext,
   TrackerError,
+  Swarm,
 } from "./tracker.js";
 
 const debug = Debug("wt-tracker:fast-tracker");
@@ -47,6 +48,69 @@ export class FastTracker implements Tracker {
       ...settings,
     };
     this.startClearPeersInterval();
+  }
+
+  private getOrCreateSwarm(infoHash: string) {
+    let swarm = this.#swarms.get(infoHash);
+
+    if (swarm === undefined) {
+      if (typeof infoHash !== "string") {
+        throw new TrackerError("announce: info_hash field is missing or wrong");
+      }
+
+      if (debugEnabled) {
+        debug(
+          "announce: swarm created:",
+          Buffer.from(infoHash).toString("hex"),
+        );
+      }
+
+      swarm = {
+        infoHash,
+        peers: [],
+        completedCount: 0,
+      };
+
+      this.#swarms.set(infoHash, swarm);
+    }
+
+    return swarm;
+  }
+
+  private addPeerToSwarm(
+    swarm: Swarm,
+    peer: PeerContext,
+    isPeerCompleted: boolean,
+  ) {
+    swarm.peers.push(peer);
+    if (isPeerCompleted) {
+      if (swarm.completedPeers === undefined) {
+        swarm.completedPeers = new Set();
+      }
+      swarm.completedPeers.add(peer.peerId);
+      swarm.completedCount++;
+    }
+  }
+
+  private removePeerFromSwarm(swarm: Swarm, peer: PeerContext) {
+    const peerIndex = swarm.peers.indexOf(peer);
+
+    if (swarm.completedPeers?.delete(peer.peerId)) {
+      swarm.completedCount--;
+    }
+
+    const lastPeer = swarm.peers.pop()!;
+    if (peerIndex < swarm.peers.length) {
+      swarm.peers[peerIndex] = lastPeer;
+    }
+  }
+
+  private setPeerCompletedInSwarm(swarm: Swarm, peer: PeerContext) {
+    if (swarm.completedPeers === undefined) {
+      swarm.completedPeers = new Set();
+    }
+    swarm.completedPeers.add(peer.peerId);
+    swarm.completedCount++;
   }
 
   private startClearPeersInterval(): void {
@@ -92,8 +156,7 @@ export class FastTracker implements Tracker {
       );
     }
 
-    swarm.removePeer(peer);
-
+    this.removePeerFromSwarm(swarm, peer);
     this.removeSwarmIfEmpty(swarm);
     this.#peers.delete(peer.peerId);
 
@@ -169,7 +232,7 @@ export class FastTracker implements Tracker {
         swarm,
       };
 
-      swarm.addPeer(peer, isPeerCompleted);
+      this.addPeerToSwarm(swarm, peer, isPeerCompleted);
 
       (socket as unknown as UnknownObject)[peerId] = peer;
       this.#peers.set(peerId, peer);
@@ -179,16 +242,17 @@ export class FastTracker implements Tracker {
       if (infoHash !== peer.swarm.infoHash) {
         const oldSwarm = peer.swarm;
 
-        oldSwarm.removePeer(peer);
-
+        this.removePeerFromSwarm(oldSwarm, peer);
         this.removeSwarmIfEmpty(oldSwarm);
 
         swarm = this.getOrCreateSwarm(infoHash);
         peer.swarm = swarm;
-        swarm.addPeer(peer, isPeerCompleted);
+        this.addPeerToSwarm(swarm, peer, isPeerCompleted);
       } else {
         swarm = peer.swarm;
-        if (isPeerCompleted) swarm.setCompleted(peer);
+        if (isPeerCompleted) {
+          this.setPeerCompletedInSwarm(swarm, peer);
+        }
       }
     } else {
       throw new TrackerError("announce: peerId mismatch");
@@ -206,28 +270,6 @@ export class FastTracker implements Tracker {
     );
 
     this.sendOffersToPeers(json, swarm.peers, peer, infoHash);
-  }
-
-  private getOrCreateSwarm(infoHash: unknown): Swarm {
-    let swarm = this.#swarms.get(infoHash as string);
-
-    if (swarm === undefined) {
-      if (typeof infoHash !== "string") {
-        throw new TrackerError("announce: info_hash field is missing or wrong");
-      }
-
-      if (debugEnabled) {
-        debug(
-          "announce: swarm created:",
-          Buffer.from(infoHash).toString("hex"),
-        );
-      }
-
-      swarm = new Swarm(infoHash);
-      this.#swarms.set(infoHash, swarm);
-    }
-
-    return swarm;
   }
 
   private sendOffersToPeers(
@@ -381,55 +423,6 @@ export class FastTracker implements Tracker {
     }
 
     socket.sendMessage({ action: "scrape", files }, socket);
-  }
-}
-
-export class Swarm {
-  public completedCount = 0;
-  private completedPeers?: Set<string>;
-
-  readonly #peers: PeerContext[] = [];
-
-  public constructor(public readonly infoHash: string) {}
-
-  public get peers(): readonly PeerContext[] {
-    return this.#peers;
-  }
-
-  public addPeer(peer: PeerContext, completed: boolean): void {
-    this.#peers.push(peer);
-    if (completed) {
-      if (this.completedPeers === undefined) {
-        this.completedPeers = new Set();
-      }
-      this.completedPeers.add(peer.peerId);
-      this.completedCount++;
-    }
-  }
-
-  public removePeer(peer: PeerContext) {
-    const index = this.#peers.indexOf(peer);
-
-    if (this.completedPeers?.delete(peer.peerId) === true) {
-      this.completedCount--;
-    }
-
-    // Delete peerId from array without calling splice
-    const last = this.#peers.pop()!;
-    if (index < this.#peers.length) {
-      this.#peers[index] = last;
-    }
-  }
-
-  public setCompleted(peer: PeerContext): void {
-    if (this.completedPeers === undefined) {
-      this.completedPeers = new Set();
-    }
-
-    if (!this.completedPeers.has(peer.peerId)) {
-      this.completedPeers.add(peer.peerId);
-      this.completedCount++;
-    }
   }
 }
 

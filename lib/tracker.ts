@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-import { Swarm } from "./fast-tracker.js";
-
 export interface SocketContext {
   sendMessage: (json: object, peer: SocketContext) => void;
 }
+
+export type Swarm = {
+  infoHash: string;
+  completedCount: number;
+  completedPeers?: Set<string>;
+  peers: PeerContext[];
+};
 
 export interface PeerContext {
   peerId: string;
