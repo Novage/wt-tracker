@@ -23,9 +23,9 @@ export interface SocketContext {
 export interface PeerContext {
   peerId: string;
   sendMessage: (json: object, peer: SocketContext) => void;
-  socketContext: SocketContext;
+  socket: SocketContext;
   lastAccessed: number;
-  swarm?: Swarm;
+  swarm: Swarm;
 }
 
 export interface Tracker {
