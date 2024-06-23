@@ -308,13 +308,7 @@ export class UWebSocketsTracker {
     }
 
     if (debugMessagesEnabled) {
-      /* debugMessages(
-        "in",
-        userData.id === undefined
-          ? "unknown peer"
-          : Buffer.from(userData.id).toString("hex"),
-        json,
-      );*/
+      debugMessages("in", json);
     }
 
     try {
@@ -346,12 +340,6 @@ export class UWebSocketsTracker {
 function sendMessage(json: object, peerContext: SocketContext): void {
   peerContext.ws.send(JSON.stringify(json), false, false);
   if (debugMessagesEnabled) {
-    /* debugMessages(
-      "out",
-      peerContext.id === undefined
-        ? "unknown peer"
-        : Buffer.from(peerContext.id).toString("hex"),
-      json,
-    );*/
+    debugMessages("out", json);
   }
 }
