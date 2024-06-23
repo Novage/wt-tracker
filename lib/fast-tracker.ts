@@ -68,7 +68,6 @@ export class FastTracker implements Tracker {
       swarm = {
         infoHash,
         peers: [],
-        completedCount: 0,
       };
 
       this.#swarms.set(infoHash, swarm);
@@ -88,16 +87,13 @@ export class FastTracker implements Tracker {
         swarm.completedPeers = new Set();
       }
       swarm.completedPeers.add(peer.peerId);
-      swarm.completedCount++;
     }
   }
 
   private removePeerFromSwarm(swarm: Swarm, peer: PeerContext) {
     const peerIndex = swarm.peers.indexOf(peer);
 
-    if (swarm.completedPeers?.delete(peer.peerId)) {
-      swarm.completedCount--;
-    }
+    swarm.completedPeers?.delete(peer.peerId);
 
     const lastPeer = swarm.peers.pop()!;
     if (peerIndex < swarm.peers.length) {
@@ -110,7 +106,6 @@ export class FastTracker implements Tracker {
       swarm.completedPeers = new Set();
     }
     swarm.completedPeers.add(peer.peerId);
-    swarm.completedCount++;
   }
 
   private startClearPeersInterval(): void {
@@ -258,13 +253,15 @@ export class FastTracker implements Tracker {
       throw new TrackerError("announce: peerId mismatch");
     }
 
+    const complete = swarm.completedPeers?.size ?? 0;
+
     socket.sendMessage(
       {
         action: "announce",
         interval: this.settings.announceInterval,
         info_hash: infoHash,
-        complete: swarm.completedCount,
-        incomplete: swarm.peers.length - swarm.completedCount,
+        complete,
+        incomplete: swarm.peers.length - complete,
       },
       socket,
     );
@@ -382,20 +379,22 @@ export class FastTracker implements Tracker {
 
     if (infoHash === undefined) {
       for (const swarm of this.#swarms.values()) {
+        const complete = swarm.completedPeers?.size ?? 0;
         files[swarm.infoHash] = {
-          complete: swarm.completedCount,
-          incomplete: swarm.peers.length - swarm.completedCount,
-          downloaded: swarm.completedCount,
+          complete,
+          incomplete: swarm.peers.length - complete,
+          downloaded: complete,
         };
       }
     } else if (infoHash instanceof Array) {
       for (const singleInfoHash of infoHash as unknown[]) {
         const swarm = this.#swarms.get(singleInfoHash as string);
         if (swarm !== undefined) {
+          const complete = swarm.completedPeers?.size ?? 0;
           files[singleInfoHash as string] = {
-            complete: swarm.completedCount,
-            incomplete: swarm.peers.length - swarm.completedCount,
-            downloaded: swarm.completedCount,
+            complete,
+            incomplete: swarm.peers.length - complete,
+            downloaded: complete,
           };
         } else if (typeof singleInfoHash === "string") {
           files[singleInfoHash] = {
@@ -408,10 +407,11 @@ export class FastTracker implements Tracker {
     } else {
       const swarm = this.#swarms.get(infoHash as string);
       if (swarm !== undefined) {
+        const complete = swarm.completedPeers?.size ?? 0;
         files[infoHash as string] = {
-          complete: swarm.completedCount,
-          incomplete: swarm.peers.length - swarm.completedCount,
-          downloaded: swarm.completedCount,
+          complete,
+          incomplete: swarm.peers.length - complete,
+          downloaded: complete,
         };
       } else if (typeof infoHash === "string") {
         files[infoHash] = {

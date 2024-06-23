@@ -20,7 +20,6 @@ export interface SocketContext {
 
 export type Swarm = {
   infoHash: string;
-  completedCount: number;
   completedPeers?: Set<string>;
   peers: PeerContext[];
 };
