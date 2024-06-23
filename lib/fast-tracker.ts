@@ -99,6 +99,16 @@ export class FastTracker implements Tracker {
     if (peerIndex < swarm.peers.length) {
       swarm.peers[peerIndex] = lastPeer;
     }
+
+    if (swarm.peers.length === 0) {
+      if (debugEnabled) {
+        debug(
+          "disconnect peer: swarm removed (empty)",
+          Buffer.from(swarm.infoHash).toString("hex"),
+        );
+      }
+      this.#swarms.delete(swarm.infoHash);
+    }
   }
 
   private setPeerCompletedInSwarm(swarm: Swarm, peer: PeerContext) {
@@ -121,38 +131,24 @@ export class FastTracker implements Tracker {
           now - peer.lastAccessed >
           this.settings.announceInterval * 2 * 1000
         ) {
+          if (debugEnabled) {
+            debug(
+              "remove by timeout peer:",
+              Buffer.from(peer.peerId).toString("hex"),
+              "swarm:",
+              Buffer.from(peer.swarm.infoHash).toString("hex"),
+            );
+          }
           this.removePeer(peer);
         }
       }
     }, this.settings.announceInterval * 1000);
   }
 
-  private removeSwarmIfEmpty(swarm: Swarm) {
-    if (swarm.peers.length === 0) {
-      if (debugEnabled) {
-        debug(
-          "disconnect peer: swarm removed (empty)",
-          Buffer.from(swarm.infoHash).toString("hex"),
-        );
-      }
-      this.#swarms.delete(swarm.infoHash);
-    }
-  }
-
   private removePeer(peer: PeerContext) {
     const swarm = peer.swarm;
 
-    if (debugEnabled) {
-      debug(
-        "disconnect peer: peer",
-        Buffer.from(peer.peerId).toString("hex"),
-        "removed from swarm",
-        Buffer.from(swarm.infoHash).toString("hex"),
-      );
-    }
-
     this.removePeerFromSwarm(swarm, peer);
-    this.removeSwarmIfEmpty(swarm);
     this.#peers.delete(peer.peerId);
 
     delete (peer.socket as unknown as UnknownObject)[peer.peerId];
@@ -194,7 +190,15 @@ export class FastTracker implements Tracker {
     for (const peerId in socket) {
       const peer = (socket as unknown as UnknownObject)[peerId] as PeerContext;
 
-      if (peer.peerId === undefined) continue;
+      if (peer.peerId !== peerId) continue; // Not a peer property
+      if (debugEnabled) {
+        debug(
+          "disconnect peer:",
+          Buffer.from(peer.peerId).toString("hex"),
+          "swarm:",
+          Buffer.from(peer.swarm.infoHash).toString("hex"),
+        );
+      }
       this.removePeer(peer);
     }
   }
@@ -215,7 +219,20 @@ export class FastTracker implements Tracker {
 
     if (peer === undefined) {
       const existingPeer = this.#peers.get(peerId);
-      if (existingPeer) this.removePeer(existingPeer);
+      if (existingPeer) {
+        if (debugEnabled) {
+          debug(
+            "move peer:",
+            Buffer.from(existingPeer.peerId).toString("hex"),
+            "from swarm:",
+            Buffer.from(existingPeer.swarm.infoHash).toString("hex"),
+            "to swarm:",
+            Buffer.from(infoHash).toString("hex"),
+          );
+        }
+
+        this.removePeer(existingPeer);
+      }
 
       swarm = this.getOrCreateSwarm(infoHash);
 
@@ -238,7 +255,6 @@ export class FastTracker implements Tracker {
         const oldSwarm = peer.swarm;
 
         this.removePeerFromSwarm(oldSwarm, peer);
-        this.removeSwarmIfEmpty(oldSwarm);
 
         swarm = this.getOrCreateSwarm(infoHash);
         peer.swarm = swarm;
@@ -362,9 +378,17 @@ export class FastTracker implements Tracker {
     const peerId = json.peer_id as string;
 
     const peer = this.#peers.get(peerId);
-    if (peer === undefined) return;
-
-    this.removePeer(peer);
+    if (peer) {
+      if (debugEnabled) {
+        debug(
+          "stop peer:",
+          Buffer.from(peer.peerId).toString("hex"),
+          "swarm:",
+          Buffer.from(peer.swarm.infoHash).toString("hex"),
+        );
+      }
+      this.removePeer(peer);
+    }
   }
 
   private processScrape(json: UnknownObject, socket: SocketContext): void {
