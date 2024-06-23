@@ -184,7 +184,6 @@ export class UWebSocketsTracker {
       compression: this.settings.websockets.compression,
       maxPayloadLength: this.settings.websockets.maxPayloadLength,
       idleTimeout: this.settings.websockets.idleTimeout,
-      open: this.onOpen,
       upgrade: this.onUpgrade,
       drain: (ws: WebSocket<SocketContext>) => {
         if (debugWebSocketsEnabled) {
@@ -195,10 +194,6 @@ export class UWebSocketsTracker {
       close: this.onClose,
     });
   }
-
-  private readonly onOpen = (): void => {
-    this.webSocketsCount++;
-  };
 
   private readonly onUpgrade = (
     response: HttpResponse,
@@ -275,6 +270,8 @@ export class UWebSocketsTracker {
         this.webSocketsCount,
       );
     }
+
+    this.webSocketsCount++;
 
     response.upgrade<Omit<SocketContext, "ws">>(
       {
