@@ -244,7 +244,7 @@ function buildServer({
         peersCount += swarm.peers.length;
 
         const infoHashHex = Buffer.from(infoHash, "binary").toString("hex");
-        peersCountPerInfoHash[infoHashHex] = peersCount;
+        peersCountPerInfoHash[infoHashHex] = swarm.peers.length;
       }
 
       const serversStats = new Array<{

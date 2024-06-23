@@ -15,7 +15,7 @@
  */
 
 import { FastTracker } from "../../lib/fast-tracker.js";
-import { PeerContext } from "../../lib/tracker.js";
+import { SocketContext } from "../../lib/tracker.js";
 
 const peersCount = 100000;
 const swarmsCount = 1000000000;
@@ -47,7 +47,7 @@ console.log(
 );
 console.log("\nadding peers to swarms");
 
-const peers: PeerContext[] = [];
+const peers: SocketContext[] = [];
 for (let p = 0; p < peersCount; p++) {
   message.peer_id = p.toPrecision(19).toString();
   message.info_hash = Math.floor(swarmsCount * Math.random())
@@ -74,7 +74,7 @@ console.log(
 console.log("\nremoving peers");
 
 for (const peer of peers) {
-  tracker.disconnectPeer(peer);
+  tracker.disconnectPeersFromSocket(peer);
 }
 
 peers.length = 0;

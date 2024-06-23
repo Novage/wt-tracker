@@ -14,16 +14,29 @@
  * limitations under the License.
  */
 
+export interface SocketContext {
+  sendMessage: (json: object, peer: SocketContext) => void;
+}
+
+export type Swarm = {
+  infoHash: string;
+  completedPeers?: Set<string>;
+  peers: PeerContext[];
+};
+
 export interface PeerContext {
-  id?: string;
-  sendMessage: (json: object, peer: PeerContext) => void;
+  peerId: string;
+  sendMessage: (json: object, peer: SocketContext) => void;
+  socket: SocketContext;
+  lastAccessed: number;
+  swarm: Swarm;
 }
 
 export interface Tracker {
   readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
   readonly settings: object;
-  processMessage: (json: object, peer: PeerContext) => void;
-  disconnectPeer: (peer: PeerContext) => void;
+  processMessage: (json: object, peer: SocketContext) => void;
+  disconnectPeersFromSocket: (peer: SocketContext) => void;
 }
 
 export class TrackerError extends Error {}
