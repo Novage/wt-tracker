@@ -41,7 +41,7 @@ npm run build
 or
 
 ```sh
-node dist/run-uws-tracker.js [config.json]
+node lib/run-uws-tracker.js [config.json]
 ```
 
 or

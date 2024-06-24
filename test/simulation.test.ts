@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../lib/fast-tracker.js";
-import { SocketContext } from "../lib/tracker.js";
+import { FastTracker } from "../src/fast-tracker.js";
+import { SocketContext } from "../src/tracker.js";
 import { describe, it, expect } from "vitest";
 
 describe("simulation", () => {
@@ -28,13 +28,13 @@ describe("simulation", () => {
 
     const tracker = new FastTracker();
 
-    const peers: SocketContext[] = [];
+    const sockets: SocketContext[] = [];
     const peersData: Array<{ infoHash?: string; peerId: string }> = [];
 
     for (let i = 0; i < peersCount; i++) {
-      peers.push({
+      sockets.push({
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        sendMessage: (_json: object, _peer: SocketContext) => {},
+        sendMessage: (_json: object, _socket: SocketContext) => {},
       });
       peersData.push({
         peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString(),
@@ -57,8 +57,8 @@ describe("simulation", () => {
     }
 
     function doIteration() {
-      const peerIndex = Math.floor(Math.random() * peers.length);
-      const peer = peers[peerIndex];
+      const peerIndex = Math.floor(Math.random() * sockets.length);
+      const peer = sockets[peerIndex];
       const peerData = peersData[peerIndex];
 
       if (peerData.infoHash) {
@@ -82,7 +82,7 @@ describe("simulation", () => {
           // disconnect
           tracker.disconnectPeersFromSocket(peer);
           peerData.infoHash = undefined;
-          peers[peerIndex] = { sendMessage: peer.sendMessage };
+          sockets[peerIndex] = { sendMessage: peer.sendMessage };
           return;
         } else {
           // announce on the same torrent

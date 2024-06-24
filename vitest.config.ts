@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     include: ["test/*.{test,spec}.{js,ts,jsx,tsx}"],
     coverage: {
-      include: ["lib/fast-tracker.ts", "lib/tracker.ts"],
+      include: ["src/fast-tracker.ts", "src/tracker.ts"],
     },
   },
 });

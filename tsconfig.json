@@ -5,7 +5,7 @@
     "lib": ["ES2020"],
     "moduleResolution": "NodeNext",
     "declaration": true,
-    "outDir": "./dist",
+    "outDir": "./lib",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": false,
@@ -15,5 +15,5 @@
     "types": ["node"]
   },
   "compileOnSave": true,
-  "include": ["lib/**/*"]
+  "include": ["src/**/*"]
 }

@@ -5,9 +5,14 @@
   "license": "Apache-2.0",
   "author": "Novage",
   "homepage": "https://github.com/Novage/wt-tracker",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "exports": "lib/index.js",
+    "types": "lib/index.d.ts"
+  },
   "type": "module",
+  "sideEffects": false,
   "engines": {
     "node": ">=16.0.0"
   },
@@ -26,11 +31,11 @@
     "websockets"
   ],
   "scripts": {
-    "start": "node ./dist/run-uws-tracker.js",
+    "start": "node ./lib/run-uws-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
-    "lint": "eslint --ext .ts lib",
-    "clean": "rimraf dist",
+    "lint": "eslint --ext .ts src",
+    "clean": "rimraf lib",
     "watch": "tsc --watch",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",

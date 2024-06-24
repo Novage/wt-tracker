@@ -158,7 +158,7 @@ export class FastTracker implements Tracker {
     return this.#swarms;
   }
 
-  public processMessage(jsonObject: object, peer: SocketContext): void {
+  public processMessage(jsonObject: object, socket: SocketContext): void {
     const json = jsonObject as UnknownObject;
     const action = json.action;
 
@@ -166,21 +166,21 @@ export class FastTracker implements Tracker {
       const event = json.event;
       if (event === undefined) {
         if (json.answer === undefined) {
-          this.processAnnounce(json, peer);
+          this.processAnnounce(json, socket);
         } else {
           this.processAnswer(json);
         }
       } else if (event === "started") {
-        this.processAnnounce(json, peer);
+        this.processAnnounce(json, socket);
       } else if (event === "stopped") {
         this.processStop(json);
       } else if (event === "completed") {
-        this.processAnnounce(json, peer, true);
+        this.processAnnounce(json, socket, true);
       } else {
         throw new TrackerError("unknown announce event");
       }
     } else if (action === "scrape") {
-      this.processScrape(json, peer);
+      this.processScrape(json, socket);
     } else {
       throw new TrackerError("unknown action");
     }

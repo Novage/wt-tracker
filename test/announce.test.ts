@@ -14,18 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../lib/fast-tracker.js";
-import { PeerContext } from "../lib/tracker.js";
+import { FastTracker } from "../src/fast-tracker.js";
 import { describe, it, expect } from "vitest";
-
-import {
-  mock,
-  instance,
-  anything,
-  verify,
-  capture,
-  resetCalls,
-} from "ts-mockito";
 
 describe("announce", () => {
   it("should add peers to swarms on announce", () => {

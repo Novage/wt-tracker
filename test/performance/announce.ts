@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../../lib/fast-tracker.js";
-import { Tracker } from "../../lib/tracker.js";
+import { FastTracker } from "../../src/fast-tracker.js";
+import { Tracker } from "../../src/tracker.js";
 
 function sendMessage() {}
 const peersCount = 100000;

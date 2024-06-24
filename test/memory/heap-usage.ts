@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../../lib/fast-tracker.js";
-import { SocketContext } from "../../lib/tracker.js";
+import { FastTracker } from "../../src/fast-tracker.js";
+import { SocketContext } from "../../src/tracker.js";
 
 const peersCount = 100000;
 const swarmsCount = 1000000000;
@@ -47,7 +47,7 @@ console.log(
 );
 console.log("\nadding peers to swarms");
 
-const peers: SocketContext[] = [];
+const sockets: SocketContext[] = [];
 for (let p = 0; p < peersCount; p++) {
   message.peer_id = p.toPrecision(19).toString();
   message.info_hash = Math.floor(swarmsCount * Math.random())
@@ -57,7 +57,7 @@ for (let p = 0; p < peersCount; p++) {
     sendMessage: () => p,
   };
   tracker.processMessage(message, peer);
-  peers.push(peer);
+  sockets.push(peer);
 }
 
 let peersCountAfter = 0;
@@ -73,11 +73,11 @@ console.log(
 
 console.log("\nremoving peers");
 
-for (const peer of peers) {
+for (const peer of sockets) {
   tracker.disconnectPeersFromSocket(peer);
 }
 
-peers.length = 0;
+sockets.length = 0;
 
 if (global.gc) {
   global.gc();

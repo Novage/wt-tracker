@@ -4,5 +4,5 @@
     "outDir": "./test_dist",
     "types": ["node", "mocha"]
   },
-  "include": ["lib/tracker.ts", "lib/fast-tracker.ts", "test/**/*"]
+  "include": ["src/tracker.ts", "src/fast-tracker.ts", "test/**/*"]
 }

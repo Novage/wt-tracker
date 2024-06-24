@@ -18,11 +18,11 @@ export interface SocketContext {
   sendMessage: (json: object, peer: SocketContext) => void;
 }
 
-export type Swarm = {
+export interface Swarm {
   infoHash: string;
   completedPeers?: Set<string>;
   peers: PeerContext[];
-};
+}
 
 export interface PeerContext {
   peerId: string;
@@ -35,8 +35,8 @@ export interface PeerContext {
 export interface Tracker {
   readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
   readonly settings: object;
-  processMessage: (json: object, peer: SocketContext) => void;
-  disconnectPeersFromSocket: (peer: SocketContext) => void;
+  processMessage: (json: object, socket: SocketContext) => void;
+  disconnectPeersFromSocket: (socket: SocketContext) => void;
 }
 
 export class TrackerError extends Error {}
