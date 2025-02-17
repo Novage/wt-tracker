@@ -34,7 +34,7 @@
     "start": "node ./lib/run-uws-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
-    "lint": "eslint --ext .ts src",
+    "lint": "eslint src",
     "clean": "rimraf lib",
     "watch": "tsc --watch",
     "test": "vitest",
@@ -47,22 +47,22 @@
     "url": "https://github.com/Novage/wt-tracker.git"
   },
   "dependencies": {
-    "debug": "^4.3.5",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0"
+    "debug": "^4.4.0",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.51.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.16",
     "@types/debug": "^4.1.12",
-    "@types/mocha": "^10.0.7",
-    "@types/node": "^20.14.8",
-    "@types/ws": "^8.5.10",
-    "@typescript-eslint/eslint-plugin": "^7.13.1",
-    "@vitest/coverage-v8": "^1.6.0",
-    "prettier": "^3.3.2",
-    "rimraf": "^5.0.7",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^22.13.4",
+    "@types/ws": "^8.5.14",
+    "@vitest/coverage-v8": "^3.0.5",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.1",
+    "rimraf": "^6.0.1",
     "ts-mockito": "^2.6.1",
-    "typescript": "^5.5.2",
-    "vitest": "^1.6.0",
-    "ws": "^8.17.1"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.1",
+    "vitest": "^3.0.5",
+    "ws": "^8.18.0"
   }
 }

@@ -95,6 +95,7 @@ export class FastTracker implements Tracker {
 
     swarm.completedPeers?.delete(peer.peerId);
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const lastPeer = swarm.peers.pop()!;
     if (peerIndex < swarm.peers.length) {
       swarm.peers[peerIndex] = lastPeer;
@@ -146,11 +147,12 @@ export class FastTracker implements Tracker {
   }
 
   private removePeer(peer: PeerContext) {
-    const swarm = peer.swarm;
+    const { swarm } = peer;
 
     this.removePeerFromSwarm(swarm, peer);
     this.#peers.delete(peer.peerId);
 
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete (peer.socket as unknown as UnknownObject)[peer.peerId];
   }
 
@@ -160,10 +162,10 @@ export class FastTracker implements Tracker {
 
   public processMessage(jsonObject: object, socket: SocketContext): void {
     const json = jsonObject as UnknownObject;
-    const action = json.action;
+    const { action } = json;
 
     if (action === "announce") {
-      const event = json.event;
+      const { event } = json;
       if (event === undefined) {
         if (json.answer === undefined) {
           this.processAnnounce(json, socket);
@@ -260,7 +262,7 @@ export class FastTracker implements Tracker {
         peer.swarm = swarm;
         this.addPeerToSwarm(swarm, peer, isPeerCompleted);
       } else {
-        swarm = peer.swarm;
+        ({ swarm } = peer);
         if (isPeerCompleted) {
           this.setPeerCompletedInSwarm(swarm, peer);
         }
@@ -295,7 +297,7 @@ export class FastTracker implements Tracker {
       return;
     }
 
-    const offers = json.offers;
+    const { offers } = json;
     if (offers === undefined) {
       return;
     } else if (!(offers instanceof Array)) {
@@ -393,13 +395,11 @@ export class FastTracker implements Tracker {
 
   private processScrape(json: UnknownObject, socket: SocketContext): void {
     const infoHash = json.info_hash;
-    const files: {
-      [key: string]: {
+    const files: Record<string, {
         complete: number;
         incomplete: number;
         downloaded: number;
-      };
-    } = {};
+      }> = {};
 
     if (infoHash === undefined) {
       for (const swarm of this.#swarms.values()) {
@@ -460,7 +460,7 @@ function sendOffer(
     throw new TrackerError("announce: wrong offer item format");
   }
 
-  const offer = (offerItem as UnknownObject).offer;
+  const { offer } = offerItem as UnknownObject;
   const offerId = (offerItem as UnknownObject).offer_id;
 
   if (!(offer instanceof Object)) {

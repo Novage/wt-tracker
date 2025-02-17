@@ -329,6 +329,7 @@ export class UWebSocketsTracker {
   ): void => {
     this.webSocketsCount--;
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (ws.getUserData().sendMessage !== undefined) {
       this.tracker.disconnectPeersFromSocket(ws as unknown as SocketContext);
     }

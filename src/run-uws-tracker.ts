@@ -236,7 +236,7 @@ function buildServer({
     .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
       debugRequest(server, request);
 
-      const swarms = tracker.swarms;
+      const { swarms } = tracker;
       const peersCountPerInfoHash: Record<string, number> = {};
 
       let peersCount = 0;
@@ -247,10 +247,7 @@ function buildServer({
         peersCountPerInfoHash[infoHashHex] = swarm.peers.length;
       }
 
-      const serversStats = new Array<{
-        server: string;
-        webSocketsCount: number;
-      }>();
+      const serversStats = [];
       for (const serverForStats of servers) {
         const { settings } = serverForStats;
         serversStats.push({
