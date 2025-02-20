@@ -9,7 +9,7 @@ WebTorrent tracker is a required component of [WebTorrent](https://github.com/we
 
 ## Features
 
-- handles more than 40k WebSocket Secure (HTTPS) peers on a VPS with only 2 GiB memory and 1 virtual CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend and perfomance optimizations in the code
+- handles up to 30k WebSocket Secure (HTTPS) peers on a VPS with only 2 GiB memory and 1 virtual CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend and perfomance optimizations in the code
 - handles ws:// (HTTP) and wss:// (HTTPS) connections simultaneously
 - IPv4 and IPv6 support
 - robust and well-tested: CI, unit tests, static code analyzis, 100% TypeScript
