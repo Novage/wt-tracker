@@ -25,18 +25,12 @@ import {
   HttpResponse,
 } from "uWebSockets.js";
 import Debug from "debug";
-import { Tracker, TrackerError, SocketContext } from "./tracker.js";
+import { PeerContext, Tracker, TrackerError } from "./tracker.js";
 import {
   ServerSettings,
   WebSocketsSettings,
   WebSocketsAccessSettings,
 } from "./run-uws-tracker.js";
-
-declare module "./tracker.js" {
-  interface SocketContext {
-    ws: WebSocket<SocketContext>;
-  }
-}
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
@@ -48,6 +42,10 @@ const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
 const decoder = new StringDecoder();
+
+export type UwsConnectionContext = {
+  ws?: WebSocket<UwsConnectionContext>;
+} & Record<string, PeerContext<UwsConnectionContext>>;
 
 export interface UwsTrackerSettings {
   server: ServerSettings;
@@ -63,7 +61,7 @@ export interface PartialUwsTrackerSettings {
 
 export class UWebSocketsTracker {
   public readonly settings: UwsTrackerSettings;
-  public readonly tracker: Readonly<Tracker>;
+  public readonly tracker: Readonly<Tracker<UwsConnectionContext>>;
 
   private webSocketsCount = 0;
   private validateOrigin = false;
@@ -72,7 +70,7 @@ export class UWebSocketsTracker {
   readonly #app: TemplatedApp;
 
   public constructor(
-    tracker: Readonly<Tracker>,
+    tracker: Readonly<Tracker<UwsConnectionContext>>,
     settings: PartialUwsTrackerSettings,
   ) {
     this.tracker = tracker;
@@ -186,7 +184,7 @@ export class UWebSocketsTracker {
       idleTimeout: this.settings.websockets.idleTimeout,
       open: this.onOpen,
       upgrade: this.onUpgrade,
-      drain: (ws: WebSocket<SocketContext>) => {
+      drain: (ws: WebSocket<UwsConnectionContext>) => {
         if (debugWebSocketsEnabled) {
           debugWebSockets("drain", ws.getBufferedAmount());
         }
@@ -276,10 +274,8 @@ export class UWebSocketsTracker {
       );
     }
 
-    response.upgrade<Omit<SocketContext, "ws">>(
-      {
-        sendMessage,
-      },
+    response.upgrade(
+      {},
       request.getHeader("sec-websocket-key"),
       request.getHeader("sec-websocket-protocol"),
       request.getHeader("sec-websocket-extensions"),
@@ -288,7 +284,7 @@ export class UWebSocketsTracker {
   };
 
   private readonly onMessage = (
-    ws: WebSocket<SocketContext>,
+    ws: WebSocket<UwsConnectionContext>,
     message: ArrayBuffer,
   ): void => {
     debugWebSockets("message of size", message.byteLength);
@@ -296,11 +292,11 @@ export class UWebSocketsTracker {
     const userData = ws.getUserData();
     userData.ws = ws;
 
-    let json: object | undefined = undefined;
+    let json;
     try {
       json = JSON.parse(
         decoder.end(new Uint8Array(message) as Buffer),
-      ) as object;
+      ) as Record<string, unknown>;
     } catch (e) {
       debugWebSockets("failed to parse JSON message", e);
       ws.close();
@@ -324,22 +320,26 @@ export class UWebSocketsTracker {
   };
 
   private readonly onClose = (
-    ws: WebSocket<SocketContext>,
+    ws: WebSocket<UwsConnectionContext>,
     code: number,
   ): void => {
     this.webSocketsCount--;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (ws.getUserData().sendMessage !== undefined) {
-      this.tracker.disconnectPeersFromSocket(ws as unknown as SocketContext);
+    const userData = ws.getUserData() as UwsConnectionContext | undefined;
+
+    // Test that user data is really a connection context
+    if (userData?.ws) {
+      this.tracker.disconnectPeers(userData);
     }
 
     debugWebSockets("closed with code", code);
   };
 }
 
-function sendMessage(json: object, peerContext: SocketContext): void {
-  peerContext.ws.send(JSON.stringify(json), false, false);
+export function sendMessage(json: object, connection: UwsConnectionContext) {
+  // Connection without WebSocket is not possible here
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  connection.ws!.send(JSON.stringify(json), false, false);
   if (debugMessagesEnabled) {
     debugMessages("out", json);
   }

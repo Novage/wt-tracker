@@ -15,7 +15,6 @@
  */
 
 import { FastTracker } from "../../src/fast-tracker.js";
-import { SocketContext } from "../../src/tracker.js";
 
 const peersCount = 100000;
 const swarmsCount = 1000000000;
@@ -39,7 +38,7 @@ for (let o = 0; o < message.numwant; o++) {
   });
 }
 
-const tracker = new FastTracker();
+const tracker = new FastTracker<{}>(undefined, () => undefined);
 
 console.log("heap", process.memoryUsage());
 console.log(
@@ -47,15 +46,13 @@ console.log(
 );
 console.log("\nadding peers to swarms");
 
-const sockets: SocketContext[] = [];
+const sockets: {}[] = [];
 for (let p = 0; p < peersCount; p++) {
   message.peer_id = p.toPrecision(19).toString();
   message.info_hash = Math.floor(swarmsCount * Math.random())
     .toPrecision(19)
     .toString();
-  const peer = {
-    sendMessage: () => p,
-  };
+  const peer = {};
   tracker.processMessage(message, peer);
   sockets.push(peer);
 }
@@ -74,7 +71,7 @@ console.log(
 console.log("\nremoving peers");
 
 for (const peer of sockets) {
-  tracker.disconnectPeersFromSocket(peer);
+  tracker.disconnectPeers(peer);
 }
 
 sockets.length = 0;

@@ -19,14 +19,14 @@ import { describe, it, expect } from "vitest";
 
 describe("announce", () => {
   it("should add peers to swarms on announce", () => {
-    const tracker = new FastTracker();
+    const tracker = new FastTracker<{}>(undefined, () => undefined);
 
     const peer0 = {
       sendMessage: () => {},
     };
     let announceMessage = {
       action: "announce",
-      event: "started",
+      event: "started" as string | undefined,
       info_hash: "swarm1",
       peer_id: "0",
       offers: new Array<unknown>(),
@@ -49,6 +49,7 @@ describe("announce", () => {
     };
     announceMessage = {
       action: "announce",
+      event: undefined,
       info_hash: "swarm1",
       peer_id: "1",
       offers: new Array<unknown>(),

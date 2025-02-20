@@ -14,29 +14,37 @@
  * limitations under the License.
  */
 
-export interface SocketContext {
-  sendMessage: (json: object, peer: SocketContext) => void;
-}
-
-export interface Swarm {
+export interface Swarm<ConnectionContext extends Record<string, unknown>> {
   infoHash: string;
   completedPeers?: Set<string>;
-  peers: PeerContext[];
+  peers: PeerContext<ConnectionContext>[];
 }
 
-export interface PeerContext {
+export interface PeerContext<
+  ConnectionContext extends Record<string, unknown>,
+> {
   peerId: string;
-  sendMessage: (json: object, peer: SocketContext) => void;
-  socket: SocketContext;
+  connection: ConnectionContext;
   lastAccessed: number;
-  swarm: Swarm;
+  swarm: Swarm<ConnectionContext>;
 }
 
-export interface Tracker {
-  readonly swarms: ReadonlyMap<string, { peers: readonly PeerContext[] }>;
-  readonly settings: object;
-  processMessage: (json: object, socket: SocketContext) => void;
-  disconnectPeersFromSocket: (socket: SocketContext) => void;
+export interface Tracker<
+  ConnectionContext extends Record<string, PeerContext<ConnectionContext>>,
+> {
+  readonly swarms: ReadonlyMap<
+    string,
+    { peers: readonly PeerContext<ConnectionContext>[] }
+  >;
+
+  readonly settings: Record<string, unknown>;
+
+  processMessage: (
+    json: Record<string, unknown>,
+    connection: ConnectionContext,
+  ) => void;
+
+  disconnectPeers: (connection: ConnectionContext) => void;
 }
 
 export class TrackerError extends Error {}

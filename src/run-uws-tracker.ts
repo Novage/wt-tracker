@@ -19,7 +19,11 @@
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import Debug from "debug";
-import { UWebSocketsTracker } from "./uws-tracker.js";
+import {
+  sendMessage,
+  UWebSocketsTracker,
+  UwsConnectionContext,
+} from "./uws-tracker.js";
 import { FastTracker } from "./fast-tracker.js";
 import { Tracker } from "./tracker.js";
 
@@ -27,7 +31,7 @@ const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;
 
 interface BuildServerParams {
-  tracker: Tracker;
+  tracker: Tracker<UwsConnectionContext>;
   serverSettings: ServerItemSettings;
   websocketsAccess: Partial<WebSocketsAccessSettings> | undefined;
   indexHtml: Buffer | undefined;
@@ -109,7 +113,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const tracker = new FastTracker(settings.tracker);
+  const tracker = new FastTracker(settings.tracker, sendMessage);
 
   try {
     await runServers(tracker, settings);
@@ -173,7 +177,10 @@ function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
   };
 }
 
-async function runServers(tracker: Tracker, settings: Settings): Promise<void> {
+async function runServers(
+  tracker: Tracker<UwsConnectionContext>,
+  settings: Settings,
+): Promise<void> {
   let indexHtml: Buffer | undefined = undefined;
 
   try {

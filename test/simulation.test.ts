@@ -15,7 +15,6 @@
  */
 
 import { FastTracker } from "../src/fast-tracker.js";
-import { SocketContext } from "../src/tracker.js";
 import { describe, it, expect } from "vitest";
 
 describe("simulation", () => {
@@ -26,16 +25,13 @@ describe("simulation", () => {
     const offersCount = 10;
     const sameIdPeersRatio = 0.1;
 
-    const tracker = new FastTracker();
+    const tracker = new FastTracker<{}>(undefined, () => undefined);
 
-    const sockets: SocketContext[] = [];
+    const sockets: {}[] = [];
     const peersData: Array<{ infoHash?: string; peerId: string }> = [];
 
     for (let i = 0; i < peersCount; i++) {
-      sockets.push({
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        sendMessage: (_json: object, _socket: SocketContext) => {},
-      });
+      sockets.push({});
       peersData.push({
         peerId: (i % Math.floor(peersCount * sameIdPeersRatio)).toString(),
       });
@@ -80,9 +76,9 @@ describe("simulation", () => {
           return;
         } else if (random < 0.06) {
           // disconnect
-          tracker.disconnectPeersFromSocket(peer);
+          tracker.disconnectPeers(peer);
           peerData.infoHash = undefined;
-          sockets[peerIndex] = { sendMessage: peer.sendMessage };
+          sockets[peerIndex] = {};
           return;
         } else {
           // announce on the same torrent
