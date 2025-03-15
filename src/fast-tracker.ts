@@ -15,23 +15,35 @@
  */
 
 import Debug from "debug";
-import { Tracker, PeerContext, TrackerError, Swarm } from "./tracker.js";
+import { Tracker, TrackerError } from "./tracker.js";
 
 const debug = Debug("wt-tracker:fast-tracker");
 const debugEnabled = debug.enabled;
 
+interface Swarm<ConnectionContext extends Record<string, unknown>> {
+  infoHash: string;
+  completedPeers?: Set<string>;
+  peers: PeerContext<ConnectionContext>[];
+}
+
+interface PeerContext<ConnectionContext extends Record<string, unknown>> {
+  peerId: string;
+  connection: ConnectionContext;
+  lastAccessed: number;
+  swarm: Swarm<ConnectionContext>;
+}
+
 type UnknownObject = Record<string, unknown>;
 
-type Settings = {
+export type FastTrackerSettings = {
   maxOffers: number;
   announceInterval: number;
 };
 
-export class FastTracker<
-  ConnectionContext extends Record<string, PeerContext<ConnectionContext>>,
-> implements Tracker<ConnectionContext>
+export class FastTracker<ConnectionContext extends Record<string, unknown>>
+  implements Tracker<ConnectionContext>
 {
-  public readonly settings: Settings;
+  public readonly settings: FastTrackerSettings;
 
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
   readonly #peers = new Map<string, PeerContext<ConnectionContext>>();
@@ -39,7 +51,7 @@ export class FastTracker<
   #clearPeersInterval?: NodeJS.Timeout;
 
   public constructor(
-    settings: Partial<Settings> | undefined,
+    settings: Partial<FastTrackerSettings> | undefined,
     private sendMessage: (
       json: UnknownObject,
       connection: ConnectionContext,
@@ -202,7 +214,7 @@ export class FastTracker<
     }
   }
 
-  public disconnectPeers(connection: ConnectionContext): void {
+  public disconnect(connection: ConnectionContext): void {
     for (const peerId in connection) {
       const peer = connection[peerId] as
         | PeerContext<ConnectionContext>

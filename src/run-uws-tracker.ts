@@ -18,7 +18,6 @@
 
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
-import Debug from "debug";
 import {
   sendMessage,
   UWebSocketsTracker,
@@ -26,54 +25,15 @@ import {
 } from "./uws-tracker.js";
 import { FastTracker } from "./fast-tracker.js";
 import { Tracker } from "./tracker.js";
-
-const debugRequests = Debug("wt-tracker:uws-tracker-requests");
-const debugRequestsEnabled = debugRequests.enabled;
-
-interface BuildServerParams {
-  tracker: Tracker<UwsConnectionContext>;
-  serverSettings: ServerItemSettings;
-  websocketsAccess: Partial<WebSocketsAccessSettings> | undefined;
-  indexHtml: Buffer | undefined;
-  servers: UWebSocketsTracker[];
-}
+import { debugRequest } from "./debugRequest.js";
+import {
+  ServerItemSettings,
+  Settings,
+  validateSettings,
+  WebSocketsAccessSettings,
+} from "./settings.js";
 
 type UnknownObject = Record<string, unknown>;
-
-export interface Settings {
-  servers: ServerItemSettings[];
-  tracker?: object;
-  websocketsAccess?: Partial<WebSocketsAccessSettings>;
-}
-
-export interface ServerItemSettings {
-  server?: Partial<ServerSettings>;
-  websockets?: Partial<WebSocketsSettings>;
-}
-
-export interface ServerSettings {
-  port: number;
-  host: string;
-  key_file_name?: string;
-  cert_file_name?: string;
-  passphrase?: string;
-  dh_params_file_name?: string;
-  ssl_prefer_low_memory_usage?: boolean;
-}
-
-export interface WebSocketsSettings {
-  path: string;
-  maxPayloadLength: number;
-  idleTimeout: number;
-  compression: number;
-  maxConnections: number;
-}
-
-export interface WebSocketsAccessSettings {
-  allowOrigins?: readonly string[];
-  denyOrigins?: readonly string[];
-  denyEmptyOrigin: boolean;
-}
 
 async function main(): Promise<void> {
   let settingsFileData: Buffer | undefined = undefined;
@@ -122,61 +82,6 @@ async function main(): Promise<void> {
   }
 }
 
-function validateSettings(jsonSettings: UnknownObject): Settings | undefined {
-  if (
-    jsonSettings.servers !== undefined &&
-    !(jsonSettings.servers instanceof Array)
-  ) {
-    console.error(
-      "failed to parse JSON configuration file: 'servers' property should be an array",
-    );
-    return undefined;
-  }
-
-  const servers: object[] = [];
-
-  if (jsonSettings.servers === undefined) {
-    servers.push({});
-  } else {
-    for (const serverSettings of jsonSettings.servers) {
-      if (serverSettings instanceof Object) {
-        servers.push(serverSettings as object);
-      } else {
-        console.error(
-          "failed to parse JSON configuration file: 'servers' property should be an array of objects",
-        );
-        return undefined;
-      }
-    }
-  }
-
-  if (
-    jsonSettings.tracker !== undefined &&
-    !(jsonSettings.tracker instanceof Object)
-  ) {
-    console.error(
-      "failed to parse JSON configuration file: 'tracker' property should be an object",
-    );
-    return undefined;
-  }
-
-  if (
-    jsonSettings.websocketsAccess !== undefined &&
-    !(jsonSettings.websocketsAccess instanceof Object)
-  ) {
-    console.error(
-      "failed to parse JSON configuration file: 'websocketsAccess' property should be an object",
-    );
-    return undefined;
-  }
-
-  return {
-    servers,
-    tracker: jsonSettings.tracker,
-    websocketsAccess: jsonSettings.websocketsAccess,
-  };
-}
-
 async function runServers(
   tracker: Tracker<UwsConnectionContext>,
   settings: Settings,
@@ -210,6 +115,14 @@ async function runServers(
 
   await Promise.all(serverPromises);
 }
+
+type BuildServerParams = {
+  tracker: Tracker<UwsConnectionContext>;
+  serverSettings: ServerItemSettings;
+  websocketsAccess: Partial<WebSocketsAccessSettings> | undefined;
+  indexHtml: Buffer | undefined;
+  servers: UWebSocketsTracker[];
+};
 
 function buildServer({
   tracker,
@@ -283,27 +196,8 @@ function buildServer({
   return server;
 }
 
-function debugRequest(server: UWebSocketsTracker, request: HttpRequest): void {
-  if (debugRequestsEnabled) {
-    debugRequests(
-      server.settings.server.host,
-      server.settings.server.port,
-      "request method:",
-      request.getMethod(),
-      "url:",
-      request.getUrl(),
-      "query:",
-      request.getQuery(),
-    );
-  }
+try {
+  await main();
+} catch (e) {
+  console.error(e);
 }
-
-async function run(): Promise<void> {
-  try {
-    await main();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-await run();

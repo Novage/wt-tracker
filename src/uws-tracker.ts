@@ -25,12 +25,12 @@ import {
   HttpResponse,
 } from "uWebSockets.js";
 import Debug from "debug";
-import { PeerContext, Tracker, TrackerError } from "./tracker.js";
+import { Tracker, TrackerError } from "./tracker.js";
 import {
   ServerSettings,
-  WebSocketsSettings,
   WebSocketsAccessSettings,
-} from "./run-uws-tracker.js";
+  WebSocketsSettings,
+} from "./settings.js";
 
 const debugWebSockets = Debug("wt-tracker:uws-tracker");
 const debugWebSocketsEnabled = debugWebSockets.enabled;
@@ -45,7 +45,7 @@ const decoder = new StringDecoder();
 
 export type UwsConnectionContext = {
   ws?: WebSocket<UwsConnectionContext>;
-} & Record<string, PeerContext<UwsConnectionContext>>;
+} & Record<string, unknown>;
 
 export interface UwsTrackerSettings {
   server: ServerSettings;
@@ -194,7 +194,10 @@ export class UWebSocketsTracker {
     });
   }
 
-  private readonly onOpen = (): void => {
+  private readonly onOpen = (ws: WebSocket<UwsConnectionContext>): void => {
+    const userData = ws.getUserData();
+    userData.ws = ws;
+
     this.webSocketsCount++;
   };
 
@@ -233,12 +236,12 @@ export class UWebSocketsTracker {
     if (this.validateOrigin) {
       const origin = request.getHeader("origin");
 
-      const shoulDeny =
+      const shouldDeny =
         (this.settings.access.denyEmptyOrigin && origin.length === 0) ||
         this.settings.access.denyOrigins?.includes(origin) === true ||
         this.settings.access.allowOrigins?.includes(origin) === false;
 
-      if (shoulDeny) {
+      if (shouldDeny) {
         if (debugRequestsEnabled) {
           debugRequests(
             this.settings.server.host,
@@ -289,9 +292,6 @@ export class UWebSocketsTracker {
   ): void => {
     debugWebSockets("message of size", message.byteLength);
 
-    const userData = ws.getUserData();
-    userData.ws = ws;
-
     let json;
     try {
       json = JSON.parse(
@@ -308,6 +308,7 @@ export class UWebSocketsTracker {
     }
 
     try {
+      const userData = ws.getUserData();
       this.tracker.processMessage(json, userData);
     } catch (e) {
       if (e instanceof TrackerError) {
@@ -325,11 +326,13 @@ export class UWebSocketsTracker {
   ): void => {
     this.webSocketsCount--;
 
-    const userData = ws.getUserData() as UwsConnectionContext | undefined;
+    const userData = ws.getUserData() as
+      | ReturnType<typeof ws.getUserData>
+      | undefined;
 
     // Test that user data is really a connection context
     if (userData?.ws) {
-      this.tracker.disconnectPeers(userData);
+      this.tracker.disconnect(userData);
     }
 
     debugWebSockets("closed with code", code);

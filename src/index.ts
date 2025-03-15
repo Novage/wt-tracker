@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-export { UWebSocketsTracker } from "./uws-tracker.js";
-export { FastTracker } from "./fast-tracker.js";
-export { Tracker, TrackerError } from "./tracker.js";
+export * from "./uws-tracker.js";
+export * from "./fast-tracker.js";
+export * from "./tracker.js";

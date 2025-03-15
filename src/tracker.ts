@@ -14,29 +14,8 @@
  * limitations under the License.
  */
 
-export interface Swarm<ConnectionContext extends Record<string, unknown>> {
-  infoHash: string;
-  completedPeers?: Set<string>;
-  peers: PeerContext<ConnectionContext>[];
-}
-
-export interface PeerContext<
-  ConnectionContext extends Record<string, unknown>,
-> {
-  peerId: string;
-  connection: ConnectionContext;
-  lastAccessed: number;
-  swarm: Swarm<ConnectionContext>;
-}
-
-export interface Tracker<
-  ConnectionContext extends Record<string, PeerContext<ConnectionContext>>,
-> {
-  readonly swarms: ReadonlyMap<
-    string,
-    { peers: readonly PeerContext<ConnectionContext>[] }
-  >;
-
+export interface Tracker<ConnectionContext> {
+  readonly swarms: ReadonlyMap<string, { peers: readonly unknown[] }>;
   readonly settings: Record<string, unknown>;
 
   processMessage: (
@@ -44,7 +23,7 @@ export interface Tracker<
     connection: ConnectionContext,
   ) => void;
 
-  disconnectPeers: (connection: ConnectionContext) => void;
+  disconnect: (connection: ConnectionContext) => void;
 }
 
 export class TrackerError extends Error {}
