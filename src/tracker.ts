@@ -24,6 +24,12 @@ export interface Tracker<ConnectionContext> {
   ) => void;
 
   disconnect: (connection: ConnectionContext) => void;
+
+  set onRemovePeer(
+    callback:
+      | ((peerId: string, connection: ConnectionContext) => void)
+      | undefined,
+  );
 }
 
 export class TrackerError extends Error {}

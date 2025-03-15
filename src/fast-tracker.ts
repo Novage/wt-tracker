@@ -46,9 +46,25 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   public readonly settings: FastTrackerSettings;
 
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
+  public get swarms(): ReadonlyMap<
+    string,
+    { peers: readonly PeerContext<ConnectionContext>[] }
+  > {
+    return this.#swarms;
+  }
+
   readonly #peers = new Map<string, PeerContext<ConnectionContext>>();
 
   #clearPeersInterval?: NodeJS.Timeout;
+
+  #onRemovePeer?: (peerId: string, connection: ConnectionContext) => void;
+  set onRemovePeer(
+    callback:
+      | ((peerId: string, connection: ConnectionContext) => void)
+      | undefined,
+  ) {
+    this.#onRemovePeer = callback ?? undefined;
+  }
 
   public constructor(
     settings: Partial<FastTrackerSettings> | undefined,
@@ -175,13 +191,8 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete peer.connection[peer.peerId];
-  }
 
-  public get swarms(): ReadonlyMap<
-    string,
-    { peers: readonly PeerContext<ConnectionContext>[] }
-  > {
-    return this.#swarms;
+    this.#onRemovePeer?.(peer.peerId, peer.connection);
   }
 
   public processMessage(
@@ -215,6 +226,8 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   }
 
   public disconnect(connection: ConnectionContext): void {
+    // Connection closed - remove all peers
+
     for (const peerId in connection) {
       const peer = connection[peerId] as
         | PeerContext<ConnectionContext>
@@ -230,6 +243,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
           Buffer.from(peer.swarm.infoHash).toString("hex"),
         );
       }
+
       this.removePeer(peer);
     }
   }
@@ -248,15 +262,14 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
     if (peer === undefined) {
       const existingPeer = this.#peers.get(peerId);
+
       if (existingPeer) {
+        // The peer previously was on a different connection
+
         if (debugEnabled) {
           debug(
-            "move peer:",
+            "peer changed connection:",
             Buffer.from(existingPeer.peerId).toString("hex"),
-            "from swarm:",
-            Buffer.from(existingPeer.swarm.infoHash).toString("hex"),
-            "to swarm:",
-            Buffer.from(infoHash).toString("hex"),
           );
         }
 
@@ -280,6 +293,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       peer.lastAccessed = performance.now();
 
       if (infoHash !== peer.swarm.infoHash) {
+        // Peer changes swarm
         const oldSwarm = peer.swarm;
 
         this.removePeerFromSwarm(oldSwarm, peer);
