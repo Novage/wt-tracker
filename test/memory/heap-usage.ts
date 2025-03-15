@@ -71,7 +71,7 @@ console.log(
 console.log("\nremoving peers");
 
 for (const peer of sockets) {
-  tracker.disconnectPeers(peer);
+  tracker.disconnect(peer);
 }
 
 sockets.length = 0;

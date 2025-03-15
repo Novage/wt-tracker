@@ -76,7 +76,7 @@ describe("simulation", () => {
           return;
         } else if (random < 0.06) {
           // disconnect
-          tracker.disconnectPeers(peer);
+          tracker.disconnect(peer);
           peerData.infoHash = undefined;
           sockets[peerIndex] = {};
           return;
