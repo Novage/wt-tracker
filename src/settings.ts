@@ -15,12 +15,9 @@
  */
 
 /* eslint-disable no-console */
-
-type UnknownObject = Record<string, unknown>;
-
 export interface Settings {
   servers: ServerItemSettings[];
-  tracker?: object;
+  tracker?: Record<string, unknown>;
   websocketsAccess?: Partial<WebSocketsAccessSettings>;
 }
 
@@ -54,7 +51,7 @@ export interface WebSocketsAccessSettings {
 }
 
 export function validateSettings(
-  jsonSettings: UnknownObject,
+  jsonSettings: Record<string, unknown>,
 ): Settings | undefined {
   if (
     jsonSettings.servers !== undefined &&
@@ -105,7 +102,7 @@ export function validateSettings(
 
   return {
     servers,
-    tracker: jsonSettings.tracker,
+    tracker: jsonSettings.tracker as Record<string, unknown>,
     websocketsAccess: jsonSettings.websocketsAccess,
   };
 }

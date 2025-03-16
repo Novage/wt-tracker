@@ -33,8 +33,6 @@ import {
   WebSocketsAccessSettings,
 } from "./settings.js";
 
-type UnknownObject = Record<string, unknown>;
-
 async function main(): Promise<void> {
   let settingsFileData: Buffer | undefined = undefined;
 
@@ -56,13 +54,13 @@ async function main(): Promise<void> {
     }
   }
 
-  let jsonSettings: UnknownObject | undefined = undefined;
+  let jsonSettings: Record<string, unknown> | undefined = undefined;
 
   try {
     jsonSettings =
       settingsFileData === undefined
         ? {}
-        : (JSON.parse(settingsFileData.toString()) as UnknownObject);
+        : (JSON.parse(settingsFileData.toString()) as Record<string, unknown>);
   } catch (e) {
     console.error("failed to parse JSON configuration file:", e);
     return;
