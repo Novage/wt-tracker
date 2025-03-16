@@ -46,14 +46,14 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   public readonly settings: FastTrackerSettings;
 
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
-  public get swarms(): ReadonlyMap<
-    string,
-    { peers: readonly PeerContext<ConnectionContext>[] }
-  > {
+  public get swarms() {
     return this.#swarms;
   }
 
   readonly #peers = new Map<string, PeerContext<ConnectionContext>>();
+  public get peers() {
+    return this.#peers;
+  }
 
   #clearPeersInterval?: NodeJS.Timeout;
 
