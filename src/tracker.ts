@@ -16,7 +16,6 @@
 
 export interface Tracker<ConnectionContext> {
   readonly swarms: ReadonlyMap<string, { peers: readonly unknown[] }>;
-  readonly settings: Record<string, unknown>;
 
   processMessage: (
     json: Record<string, unknown>,
