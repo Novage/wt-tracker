@@ -157,11 +157,6 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   }
 
   private startClearPeersInterval(): void {
-    if (this.#clearPeersInterval !== undefined) {
-      clearInterval(this.#clearPeersInterval);
-      this.#clearPeersInterval = undefined;
-    }
-
     this.#clearPeersInterval = setInterval(() => {
       const now = performance.now();
       for (const peer of this.#peers.values()) {
@@ -498,6 +493,10 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     }
 
     this.sendMessage({ action: "scrape", files }, connection);
+  }
+
+  public dispose() {
+    clearInterval(this.#clearPeersInterval);
   }
 }
 
