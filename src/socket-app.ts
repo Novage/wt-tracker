@@ -18,69 +18,16 @@
 
 import { readFileSync } from "fs";
 import { HttpResponse, HttpRequest } from "uWebSockets.js";
-import {
-  sendMessage,
-  UWebSocketsTracker,
-  UwsConnectionContext,
-} from "./uws-tracker.js";
-import { FastTracker } from "./fast-tracker.js";
+import { UWebSocketsTracker, UwsConnectionContext } from "./uws-tracker.js";
 import { Tracker } from "./tracker.js";
 import { debugRequest } from "./debugRequest.js";
 import {
   ServerItemSettings,
   Settings,
-  validateSettings,
   WebSocketsAccessSettings,
 } from "./settings.js";
 
-async function main(): Promise<void> {
-  let settingsFileData: Buffer | undefined = undefined;
-
-  if (process.argv.length <= 2) {
-    try {
-      settingsFileData = readFileSync("config.json");
-    } catch (e) {
-      if ((e as { code?: string }).code !== "ENOENT") {
-        console.error("failed to read configuration file:", e);
-        return;
-      }
-    }
-  } else {
-    try {
-      settingsFileData = readFileSync(process.argv[2]);
-    } catch (e) {
-      console.error("failed to read configuration file:", e);
-      return;
-    }
-  }
-
-  let jsonSettings: Record<string, unknown> | undefined = undefined;
-
-  try {
-    jsonSettings =
-      settingsFileData === undefined
-        ? {}
-        : (JSON.parse(settingsFileData.toString()) as Record<string, unknown>);
-  } catch (e) {
-    console.error("failed to parse JSON configuration file:", e);
-    return;
-  }
-
-  const settings = validateSettings(jsonSettings);
-  if (settings === undefined) {
-    return;
-  }
-
-  const tracker = new FastTracker(settings.tracker, sendMessage);
-
-  try {
-    await runServers(tracker, settings);
-  } catch (e) {
-    console.error("failed to start the web server:", e);
-  }
-}
-
-async function runServers(
+export async function runSocketApp(
   tracker: Tracker<UwsConnectionContext>,
   settings: Settings,
 ): Promise<void> {
@@ -192,10 +139,4 @@ function buildServer({
     });
 
   return server;
-}
-
-try {
-  await main();
-} catch (e) {
-  console.error(e);
 }

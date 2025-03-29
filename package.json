@@ -31,7 +31,7 @@
     "websockets"
   ],
   "scripts": {
-    "start": "node ./lib/run-uws-tracker.js",
+    "start": "node ./lib/run-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
     "lint": "eslint src",
