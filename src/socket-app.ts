@@ -17,15 +17,10 @@
 /* eslint-disable no-console */
 
 import { readFileSync } from "fs";
-import { HttpResponse, HttpRequest } from "uWebSockets.js";
 import { UWebSocketsTracker, UwsConnectionContext } from "./uws-tracker.js";
 import { Tracker } from "./tracker.js";
-import { debugRequest } from "./debugRequest.js";
-import {
-  ServerItemSettings,
-  Settings,
-  WebSocketsAccessSettings,
-} from "./settings.js";
+import { Settings } from "./settings.js";
+import { buildUwsTracker } from "./build-uws-tracker.js";
 
 export async function runSocketApp(
   tracker: Tracker<UwsConnectionContext>,
@@ -44,7 +39,7 @@ export async function runSocketApp(
   const servers: UWebSocketsTracker[] = [];
 
   const serverPromises = settings.servers.map(async (serverSettings) => {
-    const server = buildServer({
+    const server = buildUwsTracker({
       tracker,
       serverSettings,
       websocketsAccess: settings.websocketsAccess,
@@ -59,84 +54,4 @@ export async function runSocketApp(
   });
 
   await Promise.all(serverPromises);
-}
-
-type BuildServerParams = {
-  tracker: Tracker<UwsConnectionContext>;
-  serverSettings: ServerItemSettings;
-  websocketsAccess: Partial<WebSocketsAccessSettings> | undefined;
-  indexHtml: Buffer | undefined;
-  servers: UWebSocketsTracker[];
-};
-
-function buildServer({
-  tracker,
-  serverSettings,
-  websocketsAccess,
-  indexHtml,
-  servers,
-}: BuildServerParams): UWebSocketsTracker {
-  if (!(serverSettings instanceof Object)) {
-    throw Error(
-      "failed to parse JSON configuration file: 'servers' property should be an array of objects",
-    );
-  }
-
-  const server = new UWebSocketsTracker(tracker, {
-    ...serverSettings,
-    access: websocketsAccess,
-  });
-
-  server.app
-    .get("/", (response: HttpResponse, request: HttpRequest) => {
-      debugRequest(server, request);
-
-      if (indexHtml === undefined) {
-        const status = "404 Not Found";
-        response.writeStatus(status).end(status);
-      } else {
-        response.end(indexHtml);
-      }
-    })
-    .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
-      debugRequest(server, request);
-
-      const { swarms } = tracker;
-      const peersCountPerInfoHash: Record<string, number> = {};
-
-      let peersCount = 0;
-      for (const [infoHash, swarm] of swarms) {
-        peersCount += swarm.peers.length;
-
-        const infoHashHex = Buffer.from(infoHash, "binary").toString("hex");
-        peersCountPerInfoHash[infoHashHex] = swarm.peers.length;
-      }
-
-      const serversStats = [];
-      for (const serverForStats of servers) {
-        const { settings } = serverForStats;
-        serversStats.push({
-          server: `${settings.server.host}:${settings.server.port}`,
-          webSocketsCount: serverForStats.stats.webSocketsCount,
-        });
-      }
-
-      response.writeHeader("Content-Type", "application/json").end(
-        JSON.stringify({
-          torrentsCount: swarms.size,
-          peersCount,
-          servers: serversStats,
-          memory: process.memoryUsage(),
-          peersCountPerInfoHash,
-        }),
-      );
-    })
-    .any("/*", (response: HttpResponse, request: HttpRequest) => {
-      debugRequest(server, request);
-
-      const status = "404 Not Found";
-      response.writeStatus(status).end(status);
-    });
-
-  return server;
 }
