@@ -41,7 +41,7 @@ export async function runSocketApp(
   const getServersStats = async () => {
     return Promise.resolve(
       servers.map((server, index) => ({
-        server: `${settings.servers[index].server?.host}:${settings.servers[index].server?.port}`,
+        server: `${settings.servers[index].server?.host ?? "0.0.0.0"}:${settings.servers[index].server?.port ?? 8000}`,
         webSocketsCount: server.stats.webSocketsCount,
       })),
     );
