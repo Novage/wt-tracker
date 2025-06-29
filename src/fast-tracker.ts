@@ -129,9 +129,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   ) {
     swarm.peers.push(peer);
     if (isPeerCompleted) {
-      if (swarm.completedPeers === undefined) {
-        swarm.completedPeers = new Set();
-      }
+      swarm.completedPeers ??= new Set();
       swarm.completedPeers.add(peer.peerId);
     }
   }
@@ -165,9 +163,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     swarm: Swarm<ConnectionContext>,
     peer: PeerContext<ConnectionContext>,
   ) {
-    if (swarm.completedPeers === undefined) {
-      swarm.completedPeers = new Set();
-    }
+    swarm.completedPeers ??= new Set();
     swarm.completedPeers.add(peer.peerId);
   }
 
