@@ -9,7 +9,7 @@ type BuildServerParams = {
   serverSettings: ServerItemSettings;
   websocketsAccess: Partial<WebSocketsAccessSettings> | undefined;
   indexHtml: Buffer | undefined;
-  servers: UWebSocketsTracker[];
+  getServersStats: () => Promise<unknown>;
 };
 
 export function buildUwsTracker({
@@ -17,7 +17,7 @@ export function buildUwsTracker({
   serverSettings,
   websocketsAccess,
   indexHtml,
-  servers,
+  getServersStats,
 }: BuildServerParams): UWebSocketsTracker {
   if (!(serverSettings instanceof Object)) {
     throw Error(
@@ -41,39 +41,56 @@ export function buildUwsTracker({
         response.end(indexHtml);
       }
     })
-    .get("/stats.json", (response: HttpResponse, request: HttpRequest) => {
-      debugRequest(server, request);
+    .get(
+      "/stats.json",
+      async (response: HttpResponse, request: HttpRequest) => {
+        debugRequest(server, request);
 
-      const { swarms } = tracker;
-      const peersCountPerInfoHash: Record<string, number> = {};
-
-      let peersCount = 0;
-      for (const [infoHash, swarm] of swarms) {
-        peersCount += swarm.peers.length;
-
-        const infoHashHex = Buffer.from(infoHash, "binary").toString("hex");
-        peersCountPerInfoHash[infoHashHex] = swarm.peers.length;
-      }
-
-      const serversStats = [];
-      for (const serverForStats of servers) {
-        const { settings } = serverForStats;
-        serversStats.push({
-          server: `${settings.server.host}:${settings.server.port}`,
-          webSocketsCount: serverForStats.stats.webSocketsCount,
+        response.onAborted(() => {
+          response.aborted = true;
         });
-      }
 
-      response.writeHeader("Content-Type", "application/json").end(
-        JSON.stringify({
-          torrentsCount: swarms.size,
-          peersCount,
-          servers: serversStats,
-          memory: process.memoryUsage(),
-          peersCountPerInfoHash,
-        }),
-      );
-    })
+        const swarms = await tracker.getSwarms();
+        const serversStats = await getServersStats();
+
+        if (!response.aborted) {
+          const peersCountPerInfoHashPerTracker: Record<string, number>[] = [];
+          let peersCount = 0;
+
+          for (const trackerSwarms of swarms) {
+            const peersCountPerInfoHash: Record<string, number> = {
+              totalPeers: 0,
+            };
+
+            for (const swarm of trackerSwarms) {
+              peersCount += swarm.peersCount;
+
+              const infoHashHex = Buffer.from(
+                swarm.infoHash,
+                "binary",
+              ).toString("hex");
+
+              peersCountPerInfoHash[infoHashHex] = swarm.peersCount;
+              peersCountPerInfoHash.totalPeers += swarm.peersCount;
+            }
+
+            peersCountPerInfoHashPerTracker.push(peersCountPerInfoHash);
+          }
+
+          response.cork(() => {
+            response.writeHeader("Content-Type", "application/json").end(
+              JSON.stringify({
+                torrentsCount: swarms.length,
+                peersCount,
+                servers: serversStats,
+                memory: process.memoryUsage(),
+                peersCountPerInfoHashPerTracker,
+              }),
+            );
+          });
+        }
+      },
+    )
     .any("/*", (response: HttpResponse, request: HttpRequest) => {
       debugRequest(server, request);
 

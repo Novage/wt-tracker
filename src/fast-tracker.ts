@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+import { threadId } from "node:worker_threads";
 import Debug from "debug";
 import { Tracker, TrackerError } from "./tracker.js";
 
-const debug = Debug("wt-tracker:fast-tracker");
+const debugSuffix = threadId ? `-${threadId}` : "";
+const debug = Debug(`wt-tracker:fast-tracker${debugSuffix}`);
 const debugEnabled = debug.enabled;
 
 interface Swarm<ConnectionContext extends Record<string, unknown>> {
@@ -48,6 +50,19 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
   public get swarms() {
     return this.#swarms;
+  }
+
+  public getSwarms() {
+    const result = [];
+
+    for (const swarm of this.#swarms.values()) {
+      result.push({
+        infoHash: swarm.infoHash,
+        peersCount: swarm.peers.length,
+      });
+    }
+
+    return Promise.resolve([result]);
   }
 
   readonly #peers = new Map<string, PeerContext<ConnectionContext>>();
@@ -390,10 +405,12 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       }
     }
 
-    debug(
-      "announce: sent offers",
-      countOffersToSend < 0 ? 0 : countOffersToSend,
-    );
+    if (debugEnabled) {
+      debug(
+        "announce: sent offers",
+        countOffersToSend < 0 ? 0 : countOffersToSend,
+      );
+    }
   }
 
   private processAnswer(json: UnknownObject): void {

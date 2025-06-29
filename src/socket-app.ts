@@ -38,13 +38,22 @@ export async function runSocketApp(
 
   const servers: UWebSocketsTracker[] = [];
 
+  const getServersStats = async () => {
+    return Promise.resolve(
+      servers.map((server, index) => ({
+        server: `${settings.servers[index].server?.host}:${settings.servers[index].server?.port}`,
+        webSocketsCount: server.stats.webSocketsCount,
+      })),
+    );
+  };
+
   const serverPromises = settings.servers.map(async (serverSettings) => {
     const server = buildUwsTracker({
       tracker,
       serverSettings,
       websocketsAccess: settings.websocketsAccess,
       indexHtml,
-      servers,
+      getServersStats,
     });
     servers.push(server);
     await server.run();

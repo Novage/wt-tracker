@@ -31,14 +31,17 @@ import {
   WebSocketsAccessSettings,
   WebSocketsSettings,
 } from "./settings.js";
+import { threadId } from "node:worker_threads";
 
-const debugWebSockets = Debug("wt-tracker:uws-tracker");
+const debugSuffix = threadId ? `-${threadId}` : "";
+
+const debugWebSockets = Debug(`wt-tracker:uws-tracker${debugSuffix}`);
 const debugWebSocketsEnabled = debugWebSockets.enabled;
 
-const debugMessages = Debug("wt-tracker:uws-tracker-messages");
+const debugMessages = Debug(`wt-tracker:uws-tracker-messages${debugSuffix}`);
 const debugMessagesEnabled = debugMessages.enabled;
 
-const debugRequests = Debug("wt-tracker:uws-tracker-requests");
+const debugRequests = Debug(`wt-tracker:uws-tracker-requests${debugSuffix}`);
 const debugRequestsEnabled = debugRequests.enabled;
 
 const decoder = new StringDecoder();
@@ -61,7 +64,6 @@ export interface PartialUwsTrackerSettings {
 
 export class UWebSocketsTracker {
   public readonly settings: UwsTrackerSettings;
-  public readonly tracker: Readonly<Tracker<UwsConnectionContext>>;
 
   private webSocketsCount = 0;
   private validateOrigin = false;
@@ -70,10 +72,9 @@ export class UWebSocketsTracker {
   readonly #app: TemplatedApp;
 
   public constructor(
-    tracker: Readonly<Tracker<UwsConnectionContext>>,
+    public readonly tracker: Readonly<Tracker<UwsConnectionContext>>,
     settings: PartialUwsTrackerSettings,
   ) {
-    this.tracker = tracker;
     this.settings = {
       server: {
         port: 8000,
@@ -112,8 +113,9 @@ export class UWebSocketsTracker {
     return this.#app;
   }
 
-  public get stats(): { webSocketsCount: number } {
+  public get stats() {
     return {
+      threadId,
       webSocketsCount: this.webSocketsCount,
     };
   }

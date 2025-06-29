@@ -15,8 +15,7 @@
  */
 
 export interface Tracker<ConnectionContext> {
-  readonly swarms: ReadonlyMap<string, { peers: readonly unknown[] }>;
-
+  getSwarms: () => Promise<{ infoHash: string; peersCount: number }[][]>;
   processMessage: (
     json: Record<string, unknown>,
     connection: ConnectionContext,
