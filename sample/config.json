@@ -15,12 +15,14 @@
     },
     {
       "server": {
-        "port": 8433,
+        "port": 8443,
         "host": "0.0.0.0",
         "key_file_name": "misc/key.pem",
         "cert_file_name": "misc/cert.pem",
         "passphrase": "1234",
         "dh_params_file_name": "misc/params.dh",
+        "ca_file_name": "misc/ca.pem",
+        "ssl_ciphers": "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256",
         "ssl_prefer_low_memory_usage": true
       },
       "websockets": {
