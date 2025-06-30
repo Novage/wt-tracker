@@ -56,6 +56,7 @@ export function buildUwsTracker({
         if (!response.aborted) {
           const peersCountPerInfoHashPerTracker: Record<string, number>[] = [];
           let peersCount = 0;
+          let torrentsCount = 0;
 
           for (const trackerSwarms of swarms) {
             const peersCountPerInfoHash: Record<string, number> = {
@@ -64,6 +65,7 @@ export function buildUwsTracker({
 
             for (const swarm of trackerSwarms) {
               peersCount += swarm.peersCount;
+              torrentsCount++;
 
               const infoHashHex = Buffer.from(
                 swarm.infoHash,
@@ -80,7 +82,7 @@ export function buildUwsTracker({
           response.cork(() => {
             response.writeHeader("Content-Type", "application/json").end(
               JSON.stringify({
-                torrentsCount: swarms.length,
+                torrentsCount,
                 peersCount,
                 servers: serversStats,
                 memory: process.memoryUsage(),
