@@ -64,6 +64,7 @@ export interface PartialUwsTrackerSettings {
 
 export class UWebSocketsTracker {
   public readonly settings: UwsTrackerSettings;
+  public readonly tracker: Readonly<Tracker<UwsConnectionContext>>;
 
   private webSocketsCount = 0;
   private validateOrigin = false;
@@ -72,9 +73,10 @@ export class UWebSocketsTracker {
   readonly #app: TemplatedApp;
 
   public constructor(
-    public readonly tracker: Readonly<Tracker<UwsConnectionContext>>,
+    tracker: Readonly<Tracker<UwsConnectionContext>>,
     settings: PartialUwsTrackerSettings,
   ) {
+    this.tracker = tracker;
     this.settings = {
       server: {
         port: 8000,

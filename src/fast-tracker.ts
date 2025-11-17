@@ -46,6 +46,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   implements Tracker<ConnectionContext>
 {
   public readonly settings: FastTrackerSettings;
+  #sendMessage: (json: UnknownObject, connection: ConnectionContext) => void;
 
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
   public get swarms() {
@@ -83,11 +84,9 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
   public constructor(
     settings: Partial<FastTrackerSettings> | undefined,
-    private sendMessage: (
-      json: UnknownObject,
-      connection: ConnectionContext,
-    ) => void,
+    sendMessage: (json: UnknownObject, connection: ConnectionContext) => void,
   ) {
+    this.#sendMessage = sendMessage;
     this.settings = {
       maxOffers: 20,
       announceInterval: 20,
@@ -319,7 +318,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
     const complete = swarm.completedPeers?.size ?? 0;
 
-    this.sendMessage(
+    this.#sendMessage(
       {
         action: "announce",
         interval: this.settings.announceInterval,
@@ -368,7 +367,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       const offersIterator = offers.values();
       for (const toPeer of peers) {
         if (toPeer !== peer) {
-          this.sendMessage(
+          this.#sendMessage(
             getSendOfferJson(
               offersIterator.next().value,
               peer.peerId,
@@ -388,7 +387,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
         if (toPeer === peer) {
           i--; // do one more iteration
         } else {
-          this.sendMessage(
+          this.#sendMessage(
             getSendOfferJson(offers[i], peer.peerId, infoHash),
             toPeer.connection,
           );
@@ -417,7 +416,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     }
 
     delete json.to_peer_id;
-    this.sendMessage(json, toPeer.connection);
+    this.#sendMessage(json, toPeer.connection);
 
     if (debugEnabled) {
       debug(
@@ -505,7 +504,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       }
     }
 
-    this.sendMessage({ action: "scrape", files }, connection);
+    this.#sendMessage({ action: "scrape", files }, connection);
   }
 
   public dispose() {

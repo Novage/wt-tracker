@@ -35,18 +35,27 @@ export class MultiWorkerTracker<
     this.#onRemovePeer = callback ?? undefined;
   }
 
+  #workerPorts: MessagePort[];
+  #sendMessage: (
+    json: Record<string, unknown>,
+    connection: ConnectionContext,
+  ) => void;
+
   constructor(
-    private workerPorts: MessagePort[],
-    private sendMessage: (
+    workerPorts: MessagePort[],
+    sendMessage: (
       json: Record<string, unknown>,
       connection: ConnectionContext,
     ) => void,
-  ) {}
+  ) {
+    this.#workerPorts = workerPorts;
+    this.#sendMessage = sendMessage;
+  }
 
   async getSwarms() {
     const swarms = [];
 
-    for (const workerPort of this.workerPorts) {
+    for (const workerPort of this.#workerPorts) {
       const stats = await new Promise<TrackerWorkerOutEvent>((resolve) => {
         const requestId = Math.random();
 
@@ -94,9 +103,9 @@ export class MultiWorkerTracker<
         infoHash.charCodeAt(1) +
         infoHash.charCodeAt(2) +
         infoHash.charCodeAt(3)) %
-      this.workerPorts.length;
+      this.#workerPorts.length;
 
-    const workerPort = this.workerPorts[workerIndex];
+    const workerPort = this.#workerPorts[workerIndex];
 
     let peer = connection[peerId] as
       | PeerPortWithConnection<ConnectionContext>
@@ -155,7 +164,7 @@ export class MultiWorkerTracker<
     //   json.event,
     // );
 
-    this.sendMessage(json, peerPort.connection);
+    this.#sendMessage(json, peerPort.connection);
   };
 
   processPeerPortClose = (event: Event) => {
