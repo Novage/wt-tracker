@@ -47,21 +47,21 @@
     "url": "https://github.com/Novage/wt-tracker.git"
   },
   "dependencies": {
-    "debug": "^4.4.1",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.52.0"
+    "debug": "^4.4.3",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.56.0"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
-    "@types/node": "^24.0.7",
+    "@types/node": "^24.10.1",
     "@types/ws": "^8.18.1",
-    "@vitest/coverage-v8": "^3.2.4",
-    "globals": "^16.2.0",
+    "@vitest/coverage-v8": "^4.0.10",
+    "globals": "^16.5.0",
     "prettier": "^3.6.2",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.0",
     "ts-mockito": "^2.6.1",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.35.0",
-    "vitest": "^3.2.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.47.0",
+    "vitest": "^4.0.10",
     "ws": "^8.18.3"
   }
 }
