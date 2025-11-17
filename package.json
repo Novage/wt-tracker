@@ -32,9 +32,10 @@
   ],
   "scripts": {
     "start": "node ./lib/run-tracker.js",
+    "start:worker-demo": "npx tsc && DEBUG=wt-tracker:tracker-worker-*,wt-tracker:multi-worker-tracker,wt-tracker:uws-tracker node ./lib/run-worker-tracker.js",
     "build": "npm run lint && npm run clean && npm run compile",
     "compile": "tsc",
-    "lint": "eslint src",
+    "lint": "eslint --flag unstable_native_nodejs_ts_config src",
     "clean": "rimraf lib",
     "watch": "tsc --watch",
     "test": "vitest",
