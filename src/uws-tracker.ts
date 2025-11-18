@@ -15,22 +15,22 @@
  */
 
 import { StringDecoder } from "string_decoder";
-import {
-  App,
-  SSLApp,
-  WebSocket,
+import { App, SSLApp } from "uWebSockets.js";
+import type {
   HttpRequest,
-  TemplatedApp,
-  us_socket_context_t,
   HttpResponse,
+  TemplatedApp,
+  WebSocket,
+  us_socket_context_t,
 } from "uWebSockets.js";
 import Debug from "debug";
-import { Tracker, TrackerError } from "./tracker.js";
-import {
+import { TrackerError } from "./tracker.ts";
+import type { Tracker } from "./tracker.js";
+import type {
   ServerSettings,
   WebSocketsAccessSettings,
   WebSocketsSettings,
-} from "./settings.js";
+} from "./settings.ts";
 import { threadId } from "node:worker_threads";
 
 const debugSuffix = threadId ? `-${threadId}` : "";

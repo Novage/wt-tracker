@@ -1,4 +1,4 @@
-import { FastTrackerSettings } from "../fast-tracker.js";
+import type { FastTrackerSettings } from "../fast-tracker.ts";
 import { MessagePort } from "node:worker_threads";
 
 export type WorkerDataType = {

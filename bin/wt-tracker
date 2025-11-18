@@ -1,3 +1,3 @@
 #!/usr/bin/env node
 
-import "../lib/run-tracker.js";
+import "../src/run-tracker.ts";

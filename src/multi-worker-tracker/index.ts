@@ -6,12 +6,13 @@ TODO:
 import os from "node:os";
 import { Worker, MessagePort, threadId } from "node:worker_threads";
 import Debug from "debug";
-import { Tracker, TrackerError } from "../tracker.js";
-import {
+import { TrackerError } from "../tracker.ts";
+import type { Tracker } from "../tracker.ts";
+import type {
   TrackerWorkerInEvent,
   TrackerWorkerOutEvent,
   WorkerDataType,
-} from "./types.js";
+} from "./types.ts";
 
 const debugSuffix = threadId ? `-${threadId}` : "";
 const debug = Debug(`wt-tracker:multi-worker-tracker${debugSuffix}`);
@@ -211,7 +212,7 @@ export class MultiWorkerTracker<
 
     for (let workerIndex = 0; workerIndex < workersCount; workerIndex++) {
       workers.push(
-        new Worker(`${import.meta.dirname}/worker.js`, {
+        new Worker(`${import.meta.dirname}/worker.ts`, {
           workerData: { settings } satisfies WorkerDataType,
         }),
       );

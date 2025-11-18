@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../../src/fast-tracker.js";
+import { FastTracker } from "../../src/fast-tracker.ts";
 
 const peersCount = 100000;
 const swarmsCount = 1000000000;

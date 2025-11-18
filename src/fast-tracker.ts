@@ -16,7 +16,8 @@
 
 import { threadId } from "node:worker_threads";
 import Debug from "debug";
-import { Tracker, TrackerError } from "./tracker.js";
+import type { Tracker } from "./tracker.ts";
+import { TrackerError } from "./tracker.ts";
 
 const debugSuffix = threadId ? `-${threadId}` : "";
 const debug = Debug(`wt-tracker:fast-tracker${debugSuffix}`);

@@ -6,13 +6,13 @@ import {
   parentPort,
 } from "node:worker_threads";
 import Debug from "debug";
-import { FastTracker } from "../fast-tracker.js";
-import {
+import { FastTracker } from "../fast-tracker.ts";
+import type {
   TrackerWorkerInEvent,
   TrackerWorkerOutEvent,
   WorkerDataType,
-} from "./types.js";
-import { TrackerError } from "../tracker.js";
+} from "./types.ts";
+import { TrackerError } from "../tracker.ts";
 
 type WorkerTrackerConnectionContext = MessagePort &
   Record<string, unknown> & {

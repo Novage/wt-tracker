@@ -17,8 +17,8 @@
 /* eslint-disable no-console */
 
 import { readFileSync } from "fs";
-import { validateSettings } from "./settings.js";
-import { runSocketWorkersApp } from "./multi-worker-socket-app/index.js";
+import { validateSettings } from "./settings.ts";
+import { runSocketWorkersApp } from "./multi-worker-socket-app/index.ts";
 
 async function main(): Promise<void> {
   let settingsFileData: Buffer | undefined = undefined;

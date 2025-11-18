@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../../src/fast-tracker.js";
-import { Tracker } from "../../src/tracker.js";
+import { FastTracker } from "../../src/fast-tracker.ts";
+import { Tracker } from "../../src/tracker.ts";
+import { UwsConnectionContext } from "../../src/uws-tracker.ts";
 
 function sendMessage() {}
 const peersCount = 100000;
@@ -41,7 +42,7 @@ for (let i = 0; i < offersCount; i++) {
   });
 }
 
-function addingPeersToSwarm(tracker: Tracker) {
+function addingPeersToSwarm(tracker: Tracker<UwsConnectionContext>) {
   peers.length = 0;
   for (let i = 0; i < peersCount; i++) {
     peers.push({
@@ -113,7 +114,9 @@ function addingPeersToSwarmReference() {
 }
 
 for (let i = 0; i < 10; i++) {
-  addingPeersToSwarm(new FastTracker({}));
+  addingPeersToSwarm(
+    new FastTracker<UwsConnectionContext>({}, () => undefined),
+  );
   addingPeersToSwarmReference();
   console.log("---------");
 }

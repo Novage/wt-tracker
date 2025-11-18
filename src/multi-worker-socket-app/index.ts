@@ -15,15 +15,15 @@
  */
 
 import { App, SSLApp } from "uWebSockets.js";
-import { Settings } from "../settings.js";
+import type { Settings } from "../settings.ts";
 import { Worker } from "node:worker_threads";
-import {
+import type {
   AppsStatsResponse,
   ServerWorkerInMessage,
   ServerWorkerOutMessage,
   WorkerDataType,
-} from "./types.js";
-import { MultiWorkerTracker } from "../multi-worker-tracker/index.js";
+} from "./types.ts";
+import { MultiWorkerTracker } from "../multi-worker-tracker/index.ts";
 
 export async function runSocketWorkersApp(settings: Settings) {
   // Create connections acceptors
@@ -85,7 +85,7 @@ export async function runSocketWorkersApp(settings: Settings) {
     // Ports between the socket worker and the tracker workers
     const trackerPorts = buildWorkerPorts();
 
-    const worker = new Worker(`${import.meta.dirname}/worker.js`, {
+    const worker = new Worker(`${import.meta.dirname}/worker.ts`, {
       workerData: {
         settings,
         trackerPorts,

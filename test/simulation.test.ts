@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FastTracker } from "../src/fast-tracker.js";
+import { FastTracker } from "../src/fast-tracker.ts";
 import { describe, it, expect } from "vitest";
 
 describe("simulation", () => {

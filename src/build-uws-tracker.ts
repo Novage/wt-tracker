@@ -1,8 +1,12 @@
-import { HttpRequest, HttpResponse } from "uWebSockets.js";
-import { debugRequest } from "./debugRequest.js";
-import { ServerItemSettings, WebSocketsAccessSettings } from "./settings.js";
-import { Tracker } from "./tracker.js";
-import { UWebSocketsTracker, UwsConnectionContext } from "./uws-tracker.js";
+import type { HttpRequest, HttpResponse } from "uWebSockets.js";
+import { debugRequest } from "./debugRequest.ts";
+import type {
+  ServerItemSettings,
+  WebSocketsAccessSettings,
+} from "./settings.ts";
+import type { Tracker } from "./tracker.ts";
+import { UWebSocketsTracker } from "./uws-tracker.ts";
+import type { UwsConnectionContext } from "./uws-tracker.ts";
 
 type BuildServerParams = {
   tracker: Tracker<UwsConnectionContext>;

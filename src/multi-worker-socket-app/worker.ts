@@ -1,10 +1,7 @@
-import { Settings } from "../settings.js";
-import { Tracker } from "../tracker.js";
-import {
-  sendMessage,
-  UWebSocketsTracker,
-  UwsConnectionContext,
-} from "../uws-tracker.js";
+import type { Settings } from "../settings.ts";
+import type { Tracker } from "../tracker.ts";
+import { sendMessage, UWebSocketsTracker } from "../uws-tracker.ts";
+import type { UwsConnectionContext } from "../uws-tracker.ts";
 import { readFileSync } from "fs";
 import { MessagePort } from "worker_threads";
 import {
@@ -13,15 +10,15 @@ import {
   parentPort,
   threadId,
 } from "node:worker_threads";
-import { MultiWorkerTracker } from "../multi-worker-tracker/index.js";
-import { buildUwsTracker } from "../build-uws-tracker.js";
-import {
+import { MultiWorkerTracker } from "../multi-worker-tracker/index.ts";
+import { buildUwsTracker } from "../build-uws-tracker.ts";
+import type {
   AppDescriptorMessage,
   AppsStatsResponse,
   ServerWorkerInMessage,
   ServerWorkerOutMessage,
   WorkerDataType,
-} from "./types.js";
+} from "./types.ts";
 
 // TODO:
 // - test what host and port workers require

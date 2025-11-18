@@ -1,4 +1,4 @@
-import { Settings } from "../settings.js";
+import type { Settings } from "../settings.ts";
 import { MessagePort } from "node:worker_threads";
 
 export type WorkerDataType = {

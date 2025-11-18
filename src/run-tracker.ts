@@ -17,10 +17,10 @@
 /* eslint-disable no-console */
 
 import { readFileSync } from "fs";
-import { sendMessage } from "./uws-tracker.js";
-import { FastTracker } from "./fast-tracker.js";
-import { validateSettings } from "./settings.js";
-import { runSocketApp } from "./socket-app.js";
+import { sendMessage } from "./uws-tracker.ts";
+import { FastTracker } from "./fast-tracker.ts";
+import { validateSettings } from "./settings.ts";
+import { runSocketApp } from "./socket-app.ts";
 
 async function main(): Promise<void> {
   let settingsFileData: Buffer | undefined = undefined;

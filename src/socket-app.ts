@@ -17,10 +17,11 @@
 /* eslint-disable no-console */
 
 import { readFileSync } from "fs";
-import { UWebSocketsTracker, UwsConnectionContext } from "./uws-tracker.js";
-import { Tracker } from "./tracker.js";
-import { Settings } from "./settings.js";
-import { buildUwsTracker } from "./build-uws-tracker.js";
+import { UWebSocketsTracker } from "./uws-tracker.ts";
+import type { UwsConnectionContext } from "./uws-tracker.ts";
+import type { Tracker } from "./tracker.ts";
+import type { Settings } from "./settings.ts";
+import { buildUwsTracker } from "./build-uws-tracker.ts";
 
 export async function runSocketApp(
   tracker: Tracker<UwsConnectionContext>,

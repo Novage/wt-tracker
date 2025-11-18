@@ -15,8 +15,8 @@
  */
 
 import Debug from "debug";
-import { UWebSocketsTracker } from "./uws-tracker.js";
-import { HttpRequest } from "uWebSockets.js";
+import { UWebSocketsTracker } from "./uws-tracker.ts";
+import type { HttpRequest } from "uWebSockets.js";
 
 const debugRequests = Debug("wt-tracker:uws-tracker-requests");
 const debugRequestsEnabled = debugRequests.enabled;

@@ -15,6 +15,6 @@
  * limitations under the License.
  */
 
-export * from "./uws-tracker.js";
-export * from "./fast-tracker.js";
-export * from "./tracker.js";
+export * from "./uws-tracker.ts";
+export * from "./fast-tracker.ts";
+export * from "./tracker.ts";
