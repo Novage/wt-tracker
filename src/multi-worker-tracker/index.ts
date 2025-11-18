@@ -209,10 +209,11 @@ export class MultiWorkerTracker<
     debug("starting", workersCount, "workers");
 
     const workers: Worker[] = [];
+    const moduleExtension = import.meta.filename.endsWith(".js") ? "js" : "ts";
 
     for (let workerIndex = 0; workerIndex < workersCount; workerIndex++) {
       workers.push(
-        new Worker(`${import.meta.dirname}/worker.ts`, {
+        new Worker(`${import.meta.dirname}/worker.${moduleExtension}`, {
           workerData: { settings } satisfies WorkerDataType,
         }),
       );

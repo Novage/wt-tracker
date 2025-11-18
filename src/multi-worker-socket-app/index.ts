@@ -81,17 +81,22 @@ export async function runSocketWorkersApp(settings: Settings) {
 
   // TODO: number of workers configurable
 
+  const moduleExtension = import.meta.filename.endsWith(".js") ? "js" : "ts";
+
   for (let workerIndex = 0; workerIndex < 4; workerIndex++) {
     // Ports between the socket worker and the tracker workers
     const trackerPorts = buildWorkerPorts();
 
-    const worker = new Worker(`${import.meta.dirname}/worker.ts`, {
-      workerData: {
-        settings,
-        trackerPorts,
-      } satisfies WorkerDataType,
-      transferList: trackerPorts,
-    });
+    const worker = new Worker(
+      `${import.meta.dirname}/worker.${moduleExtension}`,
+      {
+        workerData: {
+          settings,
+          trackerPorts,
+        } satisfies WorkerDataType,
+        transferList: trackerPorts,
+      },
+    );
 
     socketWorkers.push(worker);
 
