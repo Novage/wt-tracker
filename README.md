@@ -25,11 +25,10 @@ WebTorrent tracker is a required component of [WebTorrent](https://github.com/we
 
 ## Build instructions
 
-Node.js 16+ is required.
+Node.js 22.18.0+ is required for direct TypeScript support.
 
 ```sh
 npm install
-npm run build
 ```
 
 ## Run instructions
@@ -41,6 +40,13 @@ npm run build
 or
 
 ```sh
+node src/run-tracker.ts [config.json]
+```
+
+or
+
+```sh
+npm run build
 node lib/run-tracker.js [config.json]
 ```
 
