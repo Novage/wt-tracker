@@ -1,0 +1,6 @@
+nohup: ignoring input
+
+> wt-tracker@0.0.1 start
+> node ./src/run-tracker.ts
+
+listening 0.0.0.0:3000
