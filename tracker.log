@@ -1,0 +1,5 @@
+
+> wt-tracker@0.0.1 start
+> node ./src/run-tracker.ts
+
+listening 127.0.0.1:3000

@@ -1,0 +1,21 @@
+{
+  "servers": [
+    {
+      "server": {
+        "port": 3000,
+        "host": "127.0.0.1"
+      },
+      "websockets": {
+        "path": "/*",
+        "maxPayloadLength": 65536,
+        "idleTimeout": 240,
+        "compression": 1,
+        "maxConnections": 0
+      }
+    }
+  ],
+  "tracker": {
+    "maxOffers": 20,
+    "announceInterval": 120
+  }
+}
