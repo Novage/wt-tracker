@@ -17,5 +17,8 @@
   "tracker": {
     "maxOffers": 20,
     "announceInterval": 120
+  },
+  "websocketsAccess": {
+    "denyEmptyOrigin": false
   }
 }
