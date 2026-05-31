@@ -41,7 +41,6 @@ interface PeerContext<ConnectionContext>
   extends SwarmOnPeer<ConnectionContext> {
   peerId: string;
   connection: ConnectionContext;
-  lastAccessed: number;
   nextPeerOnConn?: PeerContext<ConnectionContext>;
 }
 
@@ -107,9 +106,9 @@ function acquireSwarmNode<ConnectionContext>(
 function releaseSwarmNode<ConnectionContext>(
   node: SwarmOnPeer<ConnectionContext>,
 ): void {
+  node.swarm = undefined as unknown as Swarm<ConnectionContext>;
+  node.nextSwarmOnPeer = undefined;
   if (swarmNodePool.length < MAX_POOL_SIZE * 2) {
-    node.swarm = undefined as unknown as Swarm<ConnectionContext>;
-    node.nextSwarmOnPeer = undefined;
     swarmNodePool.push(node as unknown as SwarmOnPeer<unknown>);
   }
 }
@@ -117,7 +116,6 @@ function releaseSwarmNode<ConnectionContext>(
 function acquirePeerContext<ConnectionContext>(
   peerId: string,
   connection: ConnectionContext,
-  lastAccessed: number,
   swarm: Swarm<ConnectionContext>,
   swarmTime: number,
   swarmIndex: number,
@@ -127,7 +125,6 @@ function acquirePeerContext<ConnectionContext>(
   if (peer !== undefined) {
     peer.peerId = peerId;
     peer.connection = connection;
-    peer.lastAccessed = lastAccessed;
     peer.swarm = swarm;
     peer.swarmTime = swarmTime;
     peer.swarmIndex = swarmIndex;
@@ -139,7 +136,6 @@ function acquirePeerContext<ConnectionContext>(
   return {
     peerId,
     connection,
-    lastAccessed,
     swarm,
     swarmTime,
     swarmIndex,
@@ -152,12 +148,12 @@ function acquirePeerContext<ConnectionContext>(
 function releasePeerContext<ConnectionContext>(
   peer: PeerContext<ConnectionContext>,
 ): void {
+  peer.peerId = "";
+  peer.connection = undefined as unknown as ConnectionContext;
+  peer.swarm = undefined as unknown as Swarm<ConnectionContext>;
+  peer.nextSwarmOnPeer = undefined;
+  peer.nextPeerOnConn = undefined;
   if (peerContextPool.length < MAX_POOL_SIZE) {
-    peer.peerId = "";
-    peer.connection = undefined as unknown as ConnectionContext;
-    peer.swarm = undefined as unknown as Swarm<ConnectionContext>;
-    peer.nextSwarmOnPeer = undefined;
-    peer.nextPeerOnConn = undefined;
     peerContextPool.push(peer as unknown as PeerContext<unknown>);
   }
 }
@@ -281,6 +277,8 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   implements Tracker<ConnectionContext>
 {
   public readonly settings: FastTrackerSettings;
+  // Important: sendMessage MUST serialize or clone the `json` object synchronously 
+  // before returning, because FastTracker reuses message objects for performance.
   #sendMessage: (json: UnknownObject, connection: ConnectionContext) => void;
 
   readonly #swarms = new Map<string, Swarm<ConnectionContext>>();
@@ -577,7 +575,6 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       peer = acquirePeerContext(
         peerId,
         connection,
-        now,
         swarm,
         now,
         swarm.peers.length,
@@ -589,9 +586,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       addPeerToConnection(this.#connectionPeers, connection, peer);
 
       this.#peers.set(peerId, peer);
-    } else if (peer.peerId === peerId) {
-      peer.lastAccessed = now;
-
+    } else {
       swarm = this.getOrCreateSwarm(infoHash);
       const node = findSwarmOnPeer(peer, swarm);
       if (node === undefined) {
@@ -603,8 +598,6 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
           this.setPeerCompletedInSwarm(swarm, node);
         }
       }
-    } else {
-      throw new TrackerError("announce: peerId mismatch");
     }
 
     const complete = swarm.completedCount;
@@ -632,7 +625,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     const { offers } = json;
     if (offers === undefined) {
       return;
-    } else if (!(offers instanceof Array)) {
+    } else if (!Array.isArray(offers)) {
       throw new TrackerError("announce: offers field is not an array");
     }
 
@@ -712,7 +705,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       throw new TrackerError("answer: to_peer_id is not in the swarm");
     }
 
-    delete json.to_peer_id;
+    json.to_peer_id = undefined;
     this.#sendMessage(json, toPeer.connection);
 
     if (debugEnabled) {
@@ -781,7 +774,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
           downloaded: complete,
         };
       }
-    } else if (infoHash instanceof Array) {
+    } else if (Array.isArray(infoHash)) {
       for (const singleInfoHash of infoHash as unknown[]) {
         const swarm = this.#swarms.get(singleInfoHash as string);
         if (swarm !== undefined) {
@@ -822,6 +815,9 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
   public dispose() {
     clearInterval(this.#clearPeersInterval);
+    this.#swarms.clear();
+    this.#peers.clear();
+    this.#connectionPeers.clear();
     peerContextPool.length = 0;
     swarmNodePool.length = 0;
     reusableAnnounceMessage.info_hash = "";
@@ -854,14 +850,14 @@ function getSendOfferJson(
   fromPeerId: string,
   infoHash: string,
 ) {
-  if (!(offerItem instanceof Object)) {
+  if (typeof offerItem !== "object" || offerItem === null) {
     throw new TrackerError("announce: wrong offer item format");
   }
 
   const { offer } = offerItem as UnknownObject;
   const offerId = (offerItem as UnknownObject).offer_id;
 
-  if (!(offer instanceof Object)) {
+  if (typeof offer !== "object" || offer === null) {
     throw new TrackerError("announce: wrong offer item field format");
   }
 
