@@ -93,7 +93,7 @@ describe("announce", () => {
       event: "completed",
       info_hash: "swarm2",
       peer_id: "2_0",
-      offers: new Array<any>(),
+      offers: new Array<unknown>(),
       numwant: 100,
     };
     tracker.processMessage(announceMessage, peer2);
@@ -153,9 +153,10 @@ describe("announce", () => {
     tracker.processMessage(announceMessage, peer1);
 
     expect(tracker.swarms).to.have.all.keys("swarm1", "swarm2");
-    expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(1);
+    expect(tracker.swarms.get("swarm1")!.peers).to.have.lengthOf(2);
     expect(tracker.swarms.get("swarm1")!.peers).to.include.members([
       peerContext0,
+      peerContext1,
     ]);
     expect(tracker.swarms.get("swarm2")!.peers).to.have.lengthOf(3);
     expect(tracker.swarms.get("swarm2")!.peers).to.include.members([
