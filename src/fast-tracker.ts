@@ -23,18 +23,26 @@ const debugSuffix = threadId ? `-${threadId}` : "";
 const debug = Debug(`wt-tracker:fast-tracker${debugSuffix}`);
 const debugEnabled = debug.enabled;
 
-interface Swarm<ConnectionContext extends Record<string, unknown>> {
+interface Swarm<ConnectionContext> {
   infoHash: string;
-  completedPeers?: Set<string>;
+  completedCount: number;
   peers: PeerContext<ConnectionContext>[];
 }
 
-interface PeerContext<ConnectionContext> {
+interface SwarmOnPeer<ConnectionContext> {
+  swarm: Swarm<ConnectionContext>;
+  swarmTime: number;
+  swarmIndex: number; // index of peer in swarm.peers for O(1) removals
+  isCompleted: boolean;
+  nextSwarmOnPeer?: SwarmOnPeer<ConnectionContext>;
+}
+
+interface PeerContext<ConnectionContext>
+  extends SwarmOnPeer<ConnectionContext> {
   peerId: string;
   connection: ConnectionContext;
   lastAccessed: number;
-  swarms: string[];
-  swarmTimes: number[];
+  nextPeerOnConn?: PeerContext<ConnectionContext>;
 }
 
 type UnknownObject = Record<string, unknown>;
@@ -43,6 +51,231 @@ export type FastTrackerSettings = {
   maxOffers: number;
   announceInterval: number;
 };
+
+const MAX_POOL_SIZE = 100_000;
+
+// Pools are intentionally module-global: in worker-thread deployment (one tracker
+// per thread) this allows objects from a destroyed tracker to be reused by the next.
+// dispose() drains them if you need to reclaim memory.
+const peerContextPool: PeerContext<unknown>[] = [];
+const swarmNodePool: SwarmOnPeer<unknown>[] = [];
+
+const reusableAnnounceMessage = {
+  action: "announce" as const,
+  interval: 0,
+  info_hash: "",
+  complete: 0,
+  incomplete: 0,
+};
+
+const reusableOfferMessage = {
+  action: "announce" as const,
+  info_hash: "",
+  offer_id: undefined as unknown,
+  peer_id: "",
+  offer: {
+    type: "offer" as const,
+    sdp: undefined as unknown,
+  },
+};
+
+function acquireSwarmNode<ConnectionContext>(
+  swarm: Swarm<ConnectionContext>,
+  time: number,
+  index: number,
+  isCompleted: boolean,
+  next?: SwarmOnPeer<ConnectionContext>,
+): SwarmOnPeer<ConnectionContext> {
+  const node = swarmNodePool.pop() as SwarmOnPeer<ConnectionContext> | undefined;
+  if (node !== undefined) {
+    node.swarm = swarm;
+    node.swarmTime = time;
+    node.swarmIndex = index;
+    node.isCompleted = isCompleted;
+    node.nextSwarmOnPeer = next;
+    return node;
+  }
+  return {
+    swarm,
+    swarmTime: time,
+    swarmIndex: index,
+    isCompleted,
+    nextSwarmOnPeer: next,
+  };
+}
+
+function releaseSwarmNode<ConnectionContext>(
+  node: SwarmOnPeer<ConnectionContext>,
+): void {
+  if (swarmNodePool.length < MAX_POOL_SIZE * 2) {
+    node.swarm = undefined as unknown as Swarm<ConnectionContext>;
+    node.nextSwarmOnPeer = undefined;
+    swarmNodePool.push(node as unknown as SwarmOnPeer<unknown>);
+  }
+}
+
+function acquirePeerContext<ConnectionContext>(
+  peerId: string,
+  connection: ConnectionContext,
+  lastAccessed: number,
+  swarm: Swarm<ConnectionContext>,
+  swarmTime: number,
+  swarmIndex: number,
+  isCompleted: boolean,
+): PeerContext<ConnectionContext> {
+  const peer = peerContextPool.pop() as PeerContext<ConnectionContext> | undefined;
+  if (peer !== undefined) {
+    peer.peerId = peerId;
+    peer.connection = connection;
+    peer.lastAccessed = lastAccessed;
+    peer.swarm = swarm;
+    peer.swarmTime = swarmTime;
+    peer.swarmIndex = swarmIndex;
+    peer.isCompleted = isCompleted;
+    peer.nextSwarmOnPeer = undefined;
+    peer.nextPeerOnConn = undefined;
+    return peer;
+  }
+  return {
+    peerId,
+    connection,
+    lastAccessed,
+    swarm,
+    swarmTime,
+    swarmIndex,
+    isCompleted,
+    nextSwarmOnPeer: undefined,
+    nextPeerOnConn: undefined,
+  };
+}
+
+function releasePeerContext<ConnectionContext>(
+  peer: PeerContext<ConnectionContext>,
+): void {
+  if (peerContextPool.length < MAX_POOL_SIZE) {
+    peer.peerId = "";
+    peer.connection = undefined as unknown as ConnectionContext;
+    peer.swarm = undefined as unknown as Swarm<ConnectionContext>;
+    peer.nextSwarmOnPeer = undefined;
+    peer.nextPeerOnConn = undefined;
+    peerContextPool.push(peer as unknown as PeerContext<unknown>);
+  }
+}
+
+function findSwarmOnPeer<ConnectionContext extends Record<string, unknown>>(
+  peer: PeerContext<ConnectionContext>,
+  swarm: Swarm<ConnectionContext>,
+): SwarmOnPeer<ConnectionContext> | undefined {
+  let curr: SwarmOnPeer<ConnectionContext> | undefined = peer;
+  while (curr !== undefined) {
+    if (curr.swarm === swarm) {
+      return curr;
+    }
+    curr = curr.nextSwarmOnPeer;
+  }
+  return undefined;
+}
+
+function addSwarmToPeer<ConnectionContext extends Record<string, unknown>>(
+  peer: PeerContext<ConnectionContext>,
+  swarm: Swarm<ConnectionContext>,
+  time: number,
+  index: number,
+  isCompleted: boolean,
+): void {
+  const newNode = acquireSwarmNode(
+    swarm,
+    time,
+    index,
+    isCompleted,
+    peer.nextSwarmOnPeer,
+  );
+  peer.nextSwarmOnPeer = newNode;
+}
+
+// NOTE: Head-replacement logic (copying swarm/swarmTime/swarmIndex/isCompleted/nextSwarmOnPeer)
+// is duplicated in startClearPeersInterval for in-place traversal mutation.
+// If SwarmOnPeer fields change, update both locations.
+function removeSwarmFromPeer<ConnectionContext extends Record<string, unknown>>(
+  peer: PeerContext<ConnectionContext>,
+  swarm: Swarm<ConnectionContext>,
+): void {
+  if (peer.swarm === swarm) {
+    const next = peer.nextSwarmOnPeer;
+    if (next !== undefined) {
+      peer.swarm = next.swarm;
+      peer.swarmTime = next.swarmTime;
+      peer.swarmIndex = next.swarmIndex;
+      peer.isCompleted = next.isCompleted;
+      peer.nextSwarmOnPeer = next.nextSwarmOnPeer;
+      releaseSwarmNode(next);
+    } else {
+      peer.swarmIndex = -1;
+    }
+    return;
+  }
+
+  let prev: SwarmOnPeer<ConnectionContext> = peer;
+  let curr = peer.nextSwarmOnPeer;
+  while (curr !== undefined) {
+    if (curr.swarm === swarm) {
+      prev.nextSwarmOnPeer = curr.nextSwarmOnPeer;
+      releaseSwarmNode(curr);
+      return;
+    }
+    prev = curr;
+    curr = curr.nextSwarmOnPeer;
+  }
+}
+
+function addPeerToConnection<ConnectionContext extends Record<string, unknown>>(
+  connectionPeers: Map<ConnectionContext, PeerContext<ConnectionContext>>,
+  connection: ConnectionContext,
+  peer: PeerContext<ConnectionContext>,
+): void {
+  const head = connectionPeers.get(connection);
+  if (head !== undefined) {
+    peer.nextPeerOnConn = head;
+  }
+  connectionPeers.set(connection, peer);
+}
+
+function removePeerFromConnection<
+  ConnectionContext extends Record<string, unknown>,
+>(
+  connectionPeers: Map<ConnectionContext, PeerContext<ConnectionContext>>,
+  peer: PeerContext<ConnectionContext>,
+): void {
+  const head = connectionPeers.get(peer.connection);
+  if (head !== undefined) {
+    if (head === peer) {
+      if (peer.nextPeerOnConn !== undefined) {
+        connectionPeers.set(peer.connection, peer.nextPeerOnConn);
+      } else {
+        connectionPeers.delete(peer.connection);
+      }
+      peer.nextPeerOnConn = undefined; // break reference chain for GC
+    } else {
+      let prev = head;
+      let curr = head.nextPeerOnConn;
+      while (curr !== undefined) {
+        if (curr === peer) {
+          prev.nextPeerOnConn = curr.nextPeerOnConn;
+          curr.nextPeerOnConn = undefined; // break reference chain for GC
+          break;
+        }
+        prev = curr;
+        curr = curr.nextPeerOnConn;
+      }
+    }
+  }
+}
+
+function peerHasSwarms<ConnectionContext extends Record<string, unknown>>(
+  peer: PeerContext<ConnectionContext>,
+): boolean {
+  return peer.swarmIndex !== -1;
+}
 
 export class FastTracker<ConnectionContext extends Record<string, unknown>>
   implements Tracker<ConnectionContext>
@@ -73,7 +306,10 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     return this.#peers;
   }
 
-  readonly #connectionPeers = new Map<ConnectionContext, PeerContext<ConnectionContext>[]>();
+  readonly #connectionPeers = new Map<
+    ConnectionContext,
+    PeerContext<ConnectionContext>
+  >();
 
   #clearPeersInterval?: NodeJS.Timeout;
 
@@ -116,6 +352,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
       swarm = {
         infoHash,
+        completedCount: 0,
         peers: [],
       };
 
@@ -132,23 +369,28 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   ) {
     swarm.peers.push(peer);
     if (isPeerCompleted) {
-      swarm.completedPeers ??= new Set();
-      swarm.completedPeers.add(peer.peerId);
+      swarm.completedCount++;
     }
   }
 
   private removePeerFromSwarm(
     swarm: Swarm<ConnectionContext>,
-    peer: PeerContext<ConnectionContext>,
+    node: SwarmOnPeer<ConnectionContext>,
   ) {
-    const peerIndex = swarm.peers.indexOf(peer);
+    if (node.isCompleted) {
+      swarm.completedCount--;
+    }
 
-    swarm.completedPeers?.delete(peer.peerId);
+    const { swarmIndex } = node;
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const lastPeer = swarm.peers.pop()!;
-    if (peerIndex < swarm.peers.length) {
-      swarm.peers[peerIndex] = lastPeer;
+    if (swarmIndex < swarm.peers.length) {
+      swarm.peers[swarmIndex] = lastPeer;
+      const lastPeerNode = findSwarmOnPeer(lastPeer, swarm);
+      if (lastPeerNode !== undefined) {
+        lastPeerNode.swarmIndex = swarmIndex;
+      }
     }
 
     if (swarm.peers.length === 0) {
@@ -164,35 +406,56 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
   private setPeerCompletedInSwarm(
     swarm: Swarm<ConnectionContext>,
-    peer: PeerContext<ConnectionContext>,
+    node: SwarmOnPeer<ConnectionContext>,
   ) {
-    swarm.completedPeers ??= new Set();
-    swarm.completedPeers.add(peer.peerId);
+    if (!node.isCompleted) {
+      node.isCompleted = true;
+      swarm.completedCount++;
+    }
   }
 
   private startClearPeersInterval(): void {
     this.#clearPeersInterval = setInterval(() => {
       const now = performance.now();
       for (const peer of this.#peers.values()) {
-        for (let i = peer.swarms.length - 1; i >= 0; i--) {
-          if (now - peer.swarmTimes[i] > this.settings.announceInterval * 2 * 1000) {
-            const infoHash = peer.swarms[i];
-            const swarm = this.#swarms.get(infoHash);
-            if (swarm) {
-              if (debugEnabled) {
-                debug(
-                  "remove by timeout peer:",
-                  `remove by timeout peer: ${Buffer.from(peer.peerId).toString("hex")} swarm: ${Buffer.from(infoHash).toString("hex")}`,
-                );
+        let prev: SwarmOnPeer<ConnectionContext> | undefined = undefined;
+        let curr: SwarmOnPeer<ConnectionContext> | undefined = peer;
+
+        while (curr !== undefined) {
+          const next: SwarmOnPeer<ConnectionContext> | undefined =
+            curr.nextSwarmOnPeer;
+          if (
+            now - curr.swarmTime >
+            this.settings.announceInterval * 2 * 1000
+          ) {
+            this.removePeerFromSwarm(curr.swarm, curr);
+
+            // Head-replacement: copy next node's fields into peer.
+            // NOTE: Mirrors removeSwarmFromPeer — keep both in sync if SwarmOnPeer fields change.
+            if (curr === peer) {
+              if (next !== undefined) {
+                peer.swarm = next.swarm;
+                peer.swarmTime = next.swarmTime;
+                peer.swarmIndex = next.swarmIndex;
+                peer.isCompleted = next.isCompleted;
+                peer.nextSwarmOnPeer = next.nextSwarmOnPeer;
+                releaseSwarmNode(next);
+                curr = peer;
+                continue;
+              } else {
+                peer.swarmIndex = -1;
               }
-              this.removePeerFromSwarm(swarm, peer);
+            } else if (prev !== undefined) {
+              prev.nextSwarmOnPeer = next;
+              releaseSwarmNode(curr);
             }
-            peer.swarms.splice(i, 1);
-            peer.swarmTimes.splice(i, 1);
+          } else {
+            prev = curr;
           }
+          curr = next;
         }
 
-        if (peer.swarms.length === 0) {
+        if (!peerHasSwarms(peer)) {
           this.removePeer(peer);
         }
       }
@@ -200,27 +463,29 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
   }
 
   private removePeer(peer: PeerContext<ConnectionContext>) {
-    for (const infoHash of peer.swarms) {
-      const swarm = this.#swarms.get(infoHash);
-      if (swarm) {
-        this.removePeerFromSwarm(swarm, peer);
+    if (peer.swarmIndex !== -1) {
+      this.removePeerFromSwarm(peer.swarm, peer);
+    }
+
+    let nextNode = peer.nextSwarmOnPeer;
+    peer.nextSwarmOnPeer = undefined;
+    while (nextNode !== undefined) {
+      const next: SwarmOnPeer<ConnectionContext> | undefined =
+        nextNode.nextSwarmOnPeer;
+      if (nextNode.swarmIndex !== -1) {
+        this.removePeerFromSwarm(nextNode.swarm, nextNode);
       }
+      releaseSwarmNode(nextNode);
+      nextNode = next;
     }
 
     this.#peers.delete(peer.peerId);
 
-    const peersOnConn = this.#connectionPeers.get(peer.connection);
-    if (peersOnConn) {
-      const index = peersOnConn.indexOf(peer);
-      if (index !== -1) {
-        peersOnConn.splice(index, 1);
-        if (peersOnConn.length === 0) {
-          this.#connectionPeers.delete(peer.connection);
-        }
-      }
-    }
+    removePeerFromConnection(this.#connectionPeers, peer);
 
     this.#onRemovePeer?.(peer.peerId, peer.connection);
+
+    releasePeerContext(peer);
   }
 
   public processMessage(
@@ -255,12 +520,14 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
   public disconnect(connection: ConnectionContext): void {
     // Connection closed - remove all peers
-
-    const peersOnConn = this.#connectionPeers.get(connection);
-    if (peersOnConn) {
+    let peer: PeerContext<ConnectionContext> | undefined =
+      this.#connectionPeers.get(connection);
+    if (peer !== undefined) {
       this.#connectionPeers.delete(connection);
-      for (let i = peersOnConn.length - 1; i >= 0; i--) {
-        const peer = peersOnConn[i];
+      while (peer !== undefined) {
+        const next: PeerContext<ConnectionContext> | undefined =
+          peer.nextPeerOnConn;
+        peer.nextPeerOnConn = undefined; // break reference chain for GC (pool may be full)
         if (debugEnabled) {
           debug(
             "disconnect peer:",
@@ -269,8 +536,8 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
             getPeerSwarmsInfoHashes(peer),
           );
         }
-
         this.removePeer(peer);
+        peer = next;
       }
     }
   }
@@ -302,60 +569,52 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       peer = undefined;
     }
 
-    if (peer === undefined) {
+    const now = performance.now();
 
+    if (peer === undefined) {
       swarm = this.getOrCreateSwarm(infoHash);
 
-      peer = {
+      peer = acquirePeerContext(
         peerId,
         connection,
-        lastAccessed: performance.now(),
-        swarms: [infoHash],
-        swarmTimes: [performance.now()],
-      };
+        now,
+        swarm,
+        now,
+        swarm.peers.length,
+        isPeerCompleted,
+      );
 
       this.addPeerToSwarm(swarm, peer, isPeerCompleted);
 
-      let peersOnConn = this.#connectionPeers.get(connection);
-      if (!peersOnConn) {
-        peersOnConn = [];
-        this.#connectionPeers.set(connection, peersOnConn);
-      }
-      peersOnConn.push(peer);
+      addPeerToConnection(this.#connectionPeers, connection, peer);
 
       this.#peers.set(peerId, peer);
     } else if (peer.peerId === peerId) {
-      const now = performance.now();
       peer.lastAccessed = now;
 
       swarm = this.getOrCreateSwarm(infoHash);
-      const swarmIndex = peer.swarms.indexOf(infoHash);
-      if (swarmIndex === -1) {
-        peer.swarms.push(infoHash);
-        peer.swarmTimes.push(now);
+      const node = findSwarmOnPeer(peer, swarm);
+      if (node === undefined) {
+        addSwarmToPeer(peer, swarm, now, swarm.peers.length, isPeerCompleted);
         this.addPeerToSwarm(swarm, peer, isPeerCompleted);
       } else {
-        peer.swarmTimes[swarmIndex] = now;
+        node.swarmTime = now;
         if (isPeerCompleted) {
-          this.setPeerCompletedInSwarm(swarm, peer);
+          this.setPeerCompletedInSwarm(swarm, node);
         }
       }
     } else {
       throw new TrackerError("announce: peerId mismatch");
     }
 
-    const complete = swarm.completedPeers?.size ?? 0;
+    const complete = swarm.completedCount;
 
-    this.#sendMessage(
-      {
-        action: "announce",
-        interval: this.settings.announceInterval,
-        info_hash: infoHash,
-        complete,
-        incomplete: swarm.peers.length - complete,
-      },
-      connection,
-    );
+    reusableAnnounceMessage.interval = this.settings.announceInterval;
+    reusableAnnounceMessage.info_hash = infoHash;
+    reusableAnnounceMessage.complete = complete;
+    reusableAnnounceMessage.incomplete = swarm.peers.length - complete;
+
+    this.#sendMessage(reusableAnnounceMessage, connection);
 
     this.sendOffersToPeers(json, swarm.peers, peer, infoHash);
   }
@@ -392,12 +651,14 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
     if (countOffersToSend === countPeersToSend) {
       // we have offers for all the peers from the swarm - send offers to all
-      const offersIterator = offers.values();
-      for (const toPeer of peers) {
+      let offerIdx = 0;
+      // eslint-disable-next-line @typescript-eslint/prefer-for-of
+      for (let i = 0; i < peers.length; i++) {
+        const toPeer = peers[i];
         if (toPeer !== peer) {
           this.#sendMessage(
             getSendOfferJson(
-              offersIterator.next().value,
+              offers[offerIdx++],
               peer.peerId,
               infoHash,
             ),
@@ -477,8 +738,8 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     const peer = this.#peers.get(peerId);
     if (!peer) return;
 
-    const swarmIndex = peer.swarms.indexOf(infoHash);
-    if (swarmIndex === -1) return;
+    const node = findSwarmOnPeer(peer, swarm);
+    if (node === undefined) return;
 
     if (debugEnabled) {
       debug(
@@ -489,11 +750,10 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       );
     }
 
-    this.removePeerFromSwarm(swarm, peer);
-    peer.swarms.splice(swarmIndex, 1);
-    peer.swarmTimes.splice(swarmIndex, 1);
+    this.removePeerFromSwarm(swarm, node);
+    removeSwarmFromPeer(peer, swarm);
 
-    if (peer.swarms.length === 0) {
+    if (!peerHasSwarms(peer)) {
       this.removePeer(peer);
     }
   }
@@ -514,7 +774,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
     if (infoHash === undefined) {
       for (const swarm of this.#swarms.values()) {
-        const complete = swarm.completedPeers?.size ?? 0;
+        const complete = swarm.completedCount;
         files[swarm.infoHash] = {
           complete,
           incomplete: swarm.peers.length - complete,
@@ -525,7 +785,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
       for (const singleInfoHash of infoHash as unknown[]) {
         const swarm = this.#swarms.get(singleInfoHash as string);
         if (swarm !== undefined) {
-          const complete = swarm.completedPeers?.size ?? 0;
+          const complete = swarm.completedCount;
           files[singleInfoHash as string] = {
             complete,
             incomplete: swarm.peers.length - complete,
@@ -542,7 +802,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
     } else {
       const swarm = this.#swarms.get(infoHash as string);
       if (swarm !== undefined) {
-        const complete = swarm.completedPeers?.size ?? 0;
+        const complete = swarm.completedCount;
         files[infoHash as string] = {
           complete,
           incomplete: swarm.peers.length - complete,
@@ -562,16 +822,29 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
 
   public dispose() {
     clearInterval(this.#clearPeersInterval);
+    peerContextPool.length = 0;
+    swarmNodePool.length = 0;
+    reusableAnnounceMessage.info_hash = "";
+    reusableOfferMessage.info_hash = "";
+    reusableOfferMessage.offer_id = undefined;
+    reusableOfferMessage.peer_id = "";
+    reusableOfferMessage.offer.sdp = undefined;
   }
 }
 
-function getPeerSwarmsInfoHashes(peer: PeerContext<unknown>): string {
+function getPeerSwarmsInfoHashes(
+  peer: PeerContext<Record<string, unknown>>,
+): string {
   let result = "";
-  for (let i = 0; i < peer.swarms.length; i++) {
-    if (i > 0) {
-      result += ",";
+  let curr: SwarmOnPeer<Record<string, unknown>> | undefined = peer;
+  while (curr !== undefined) {
+    if (curr.swarmIndex !== -1) {
+      if (result !== "") {
+        result += ",";
+      }
+      result += Buffer.from(curr.swarm.infoHash).toString("hex");
     }
-    result += Buffer.from(peer.swarms[i]).toString("hex");
+    curr = curr.nextSwarmOnPeer;
   }
   return result;
 }
@@ -592,14 +865,10 @@ function getSendOfferJson(
     throw new TrackerError("announce: wrong offer item field format");
   }
 
-  return {
-    action: "announce",
-    info_hash: infoHash,
-    offer_id: offerId, // offerId is not validated to be a string
-    peer_id: fromPeerId,
-    offer: {
-      type: "offer",
-      sdp: (offer as UnknownObject).sdp, // offer.sdp is not validated to be a string
-    },
-  };
+  reusableOfferMessage.info_hash = infoHash;
+  reusableOfferMessage.offer_id = offerId;
+  reusableOfferMessage.peer_id = fromPeerId;
+  reusableOfferMessage.offer.sdp = (offer as UnknownObject).sdp;
+
+  return reusableOfferMessage;
 }

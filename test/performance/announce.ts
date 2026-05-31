@@ -15,8 +15,8 @@
  */
 
 import { FastTracker } from "../../src/fast-tracker.ts";
-import { Tracker } from "../../src/tracker.ts";
-import { UwsConnectionContext } from "../../src/uws-tracker.ts";
+import type { Tracker } from "../../src/tracker.ts";
+import type { UwsConnectionContext } from "../../src/uws-tracker.ts";
 
 function sendMessage() {}
 const peersCount = 100000;
