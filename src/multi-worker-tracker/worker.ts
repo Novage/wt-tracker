@@ -37,7 +37,7 @@ if (!isMainThread && parentPort) {
 
     if (data?.type === "port") {
       // Port from MultiWorkerTracker
-      const trackerPort = messageEvent.ports[0] as unknown as MessagePort;
+      const trackerPort = messageEvent.ports[0];
       trackerPort.addEventListener("message", processPortMessage);
     }
   });

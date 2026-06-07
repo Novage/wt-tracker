@@ -37,8 +37,9 @@ interface SwarmOnPeer<ConnectionContext> {
   nextSwarmOnPeer?: SwarmOnPeer<ConnectionContext>;
 }
 
-interface PeerContext<ConnectionContext>
-  extends SwarmOnPeer<ConnectionContext> {
+interface PeerContext<
+  ConnectionContext,
+> extends SwarmOnPeer<ConnectionContext> {
   peerId: string;
   connection: ConnectionContext;
   nextPeerOnConn?: PeerContext<ConnectionContext>;
@@ -85,7 +86,9 @@ function acquireSwarmNode<ConnectionContext>(
   isCompleted: boolean,
   next?: SwarmOnPeer<ConnectionContext>,
 ): SwarmOnPeer<ConnectionContext> {
-  const node = swarmNodePool.pop() as SwarmOnPeer<ConnectionContext> | undefined;
+  const node = swarmNodePool.pop() as
+    | SwarmOnPeer<ConnectionContext>
+    | undefined;
   if (node !== undefined) {
     node.swarm = swarm;
     node.swarmTime = time;
@@ -109,7 +112,7 @@ function releaseSwarmNode<ConnectionContext>(
   node.swarm = undefined as unknown as Swarm<ConnectionContext>;
   node.nextSwarmOnPeer = undefined;
   if (swarmNodePool.length < MAX_POOL_SIZE * 2) {
-    swarmNodePool.push(node as unknown as SwarmOnPeer<unknown>);
+    swarmNodePool.push(node);
   }
 }
 
@@ -121,7 +124,9 @@ function acquirePeerContext<ConnectionContext>(
   swarmIndex: number,
   isCompleted: boolean,
 ): PeerContext<ConnectionContext> {
-  const peer = peerContextPool.pop() as PeerContext<ConnectionContext> | undefined;
+  const peer = peerContextPool.pop() as
+    | PeerContext<ConnectionContext>
+    | undefined;
   if (peer !== undefined) {
     peer.peerId = peerId;
     peer.connection = connection;
@@ -154,7 +159,7 @@ function releasePeerContext<ConnectionContext>(
   peer.nextSwarmOnPeer = undefined;
   peer.nextPeerOnConn = undefined;
   if (peerContextPool.length < MAX_POOL_SIZE) {
-    peerContextPool.push(peer as unknown as PeerContext<unknown>);
+    peerContextPool.push(peer);
   }
 }
 
@@ -273,11 +278,11 @@ function peerHasSwarms<ConnectionContext extends Record<string, unknown>>(
   return peer.swarmIndex !== -1;
 }
 
-export class FastTracker<ConnectionContext extends Record<string, unknown>>
-  implements Tracker<ConnectionContext>
-{
+export class FastTracker<
+  ConnectionContext extends Record<string, unknown>,
+> implements Tracker<ConnectionContext> {
   public readonly settings: FastTrackerSettings;
-  // Important: sendMessage MUST serialize or clone the `json` object synchronously 
+  // Important: sendMessage MUST serialize or clone the `json` object synchronously
   // before returning, because FastTracker reuses message objects for performance.
   #sendMessage: (json: UnknownObject, connection: ConnectionContext) => void;
 
@@ -650,11 +655,7 @@ export class FastTracker<ConnectionContext extends Record<string, unknown>>
         const toPeer = peers[i];
         if (toPeer !== peer) {
           this.#sendMessage(
-            getSendOfferJson(
-              offers[offerIdx++],
-              peer.peerId,
-              infoHash,
-            ),
+            getSendOfferJson(offers[offerIdx++], peer.peerId, infoHash),
             toPeer.connection,
           );
         }

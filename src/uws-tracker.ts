@@ -298,9 +298,10 @@ export class UWebSocketsTracker {
 
     let json;
     try {
-      json = JSON.parse(
-        decoder.end(new Uint8Array(message) as Buffer),
-      ) as Record<string, unknown>;
+      json = JSON.parse(decoder.end(new Uint8Array(message))) as Record<
+        string,
+        unknown
+      >;
     } catch (e) {
       debugWebSockets("failed to parse JSON message", e);
       ws.close();

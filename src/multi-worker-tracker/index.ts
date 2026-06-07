@@ -25,8 +25,7 @@ type PeerPortWithConnection<ConnectionContext> = MessagePort & {
 
 export class MultiWorkerTracker<
   ConnectionContext extends Record<string, unknown>,
-> implements Tracker<ConnectionContext>
-{
+> implements Tracker<ConnectionContext> {
   #onRemovePeer?: (peerId: string, connection: ConnectionContext) => void;
   set onRemovePeer(
     callback:
@@ -112,7 +111,7 @@ export class MultiWorkerTracker<
       | PeerPortWithConnection<ConnectionContext>
       | undefined;
 
-    if (!peer || peer.workerIndex !== workerIndex) {
+    if (peer?.workerIndex !== workerIndex) {
       // Create or recreate peer on worker
 
       const { port1, port2 } = new MessageChannel();

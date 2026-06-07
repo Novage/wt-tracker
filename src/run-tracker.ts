@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     }
   }
 
-  let jsonSettings: Record<string, unknown> | undefined = undefined;
+  let jsonSettings: Record<string, unknown> | undefined;
 
   try {
     jsonSettings =
