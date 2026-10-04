@@ -7,6 +7,14 @@ High-performance WebTorrent tracker.
 
 WebTorrent tracker is a required component of [WebTorrent](https://github.com/webtorrent/webtorrent) and [P2P Media Loader](https://github.com/Novage/p2p-media-loader) (peer-to-peer networks for web browsers) to do [WebRTC](https://en.wikipedia.org/wiki/WebRTC) signaling - exchanging connection data (i.e. [SDP](https://en.wikipedia.org/wiki/Session_Description_Protocol)) between peers - joining them into swarms.
 
+> [!TIP]
+> **We recommend [wt-tracker-rust](https://github.com/Novage/wt-tracker-rust)**, the Rust port of this tracker, for new deployments.
+>
+> - Drop-in replacement: the same `config.json` format and the same wire protocol (replies are byte-identical, checked by a differential test against this tracker).
+> - Uses all CPU cores, and less CPU and memory: on one core 1.35–1.6× less CPU per message and, in three of four load profiles, 3.2–4.6× less memory per connection than this tracker (similar memory under the heaviest load).
+> - In production on a 2-core Oracle Cloud **Free** Tier Ampere A1 instance it serves ~45k peers (one WebSocket connection per peer) at ~15% CPU and ~600 MiB; the resources allow well over 100k peers (estimated).
+> - permessage-deflate, graceful shutdown and TLS session resumption built in.
+
 ## Features
 
 - handles up to 20k WebSocket Secure (HTTPS) peers on a VPS with only 2 GiB memory and 1 virtual CPU thanks to [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) I/O backend and perfomance optimizations in the code
@@ -18,6 +26,7 @@ WebTorrent tracker is a required component of [WebTorrent](https://github.com/we
 
 ## Related projects
 
+- [wt-tracker-rust](https://github.com/Novage/wt-tracker-rust) - the recommended Rust port of this tracker: multi-core, drop-in compatible
 - [P2P Media Loader](https://github.com/Novage/p2p-media-loader) - an open-source engine for P2P streaming of live and on demand video directly in a web browser HTML page
 - [Novage, LLC](https://novage.com.ua/) - P2P development, support & consulting
 - [WebTorrent](https://github.com/webtorrent/webtorrent) - streaming torrent client for the web https://webtorrent.io
