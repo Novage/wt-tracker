@@ -12,7 +12,7 @@ WebTorrent tracker is a required component of [WebTorrent](https://github.com/we
 >
 > - Drop-in replacement: the same `config.json` format and the same wire protocol (replies are byte-identical, checked by a differential test against this tracker).
 > - Uses all CPU cores, and less CPU and memory: on one core 1.35–1.6× less CPU per message and, in three of four load profiles, 3.2–4.6× less memory per connection than this tracker (similar memory under the heaviest load).
-> - In production on a 2-core Oracle Cloud **Free** Tier Ampere A1 instance: the free server handles about 100k peers within its free 10 TB of monthly egress and about 200k with its CPU (estimated).
+> - A free 2-core Oracle Cloud **Free** Tier Ampere A1 instance handles about 100k peers within its free 10 TB of monthly egress and about 200k with its CPU (estimated).
 > - permessage-deflate, graceful shutdown and TLS session resumption built in.
 
 ## Features
