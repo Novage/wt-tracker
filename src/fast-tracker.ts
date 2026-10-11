@@ -511,6 +511,17 @@ export class FastTracker<
         this.processStop(json);
       } else if (event === "completed") {
         this.processAnnounce(json, connection, true);
+      } else if (event === "paused") {
+        const response: UnknownObject = {
+          action: "announce",
+          "failure reason": "unsupported announce event: paused",
+        };
+
+        if (typeof json.info_hash === "string") {
+          response.info_hash = json.info_hash;
+        }
+
+        this.#sendMessage(response, connection);
       } else {
         throw new TrackerError("unknown announce event");
       }
