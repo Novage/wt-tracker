@@ -165,4 +165,54 @@ describe("announce", () => {
       peerContext2_2,
     ]);
   });
+
+  it("should reject paused announces without closing the connection", () => {
+    const responses: Record<string, unknown>[] = [];
+    const connection = {};
+
+    const tracker = new FastTracker<{}>(undefined, (json) => {
+      responses.push({ ...json });
+    });
+
+    const infoHash = "01234567890123456789";
+
+    try {
+      expect(() => {
+        tracker.processMessage(
+          {
+            action: "announce",
+            event: "paused",
+            info_hash: infoHash,
+            peer_id: "abcdefghijklmnopqrst",
+          },
+          connection,
+        );
+      }).not.to.throw();
+
+      expect(responses).to.have.lengthOf(1);
+      expect(responses[0]).to.include({
+        action: "announce",
+        "failure reason": "unsupported announce event: paused",
+        info_hash: infoHash,
+      });
+
+      tracker.processMessage(
+        {
+          action: "announce",
+          event: "started",
+          info_hash: infoHash,
+          peer_id: "zyxwvutsrqponmlkjihg",
+        },
+        connection,
+      );
+
+      expect(responses).to.have.lengthOf(2);
+      expect(responses[1]).to.include({
+        action: "announce",
+        info_hash: infoHash,
+      });
+    } finally {
+      tracker.dispose();
+    }
+  });
 });
