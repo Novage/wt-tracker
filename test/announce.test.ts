@@ -165,4 +165,62 @@ describe("announce", () => {
       peerContext2_2,
     ]);
   });
+
+  it("should handle paused announces as periodic announces", () => {
+    const sent: [Record<string, unknown>, unknown][] = [];
+    const tracker = new FastTracker<{}>(undefined, (json, connection) => {
+      sent.push([{ ...json }, connection]);
+    });
+    const seed = {};
+    const partial = {};
+
+    try {
+      tracker.processMessage(
+        {
+          action: "announce",
+          info_hash: "swarm1",
+          peer_id: "seed",
+          numwant: 10,
+          offers: [],
+        },
+        seed,
+      );
+
+      // BEP 21: a partial seed sends "paused" on every announce, the first one too.
+      const paused = {
+        action: "announce",
+        event: "paused",
+        info_hash: "swarm1",
+        peer_id: "partial",
+        left: 1024,
+        numwant: 10,
+        offers: [{ offer: { type: "offer", sdp: "sdp" }, offer_id: "o1" }],
+      };
+      expect(() => tracker.processMessage(paused, partial)).not.to.throw();
+
+      const swarm = tracker.swarms.get("swarm1");
+      expect(swarm?.peers.map((p) => p.peerId)).to.have.members([
+        "seed",
+        "partial",
+      ]);
+      expect(swarm?.completedCount).to.equal(0);
+      // The seed got the partial seed's offer.
+      expect(
+        sent.some(
+          ([json, connection]) =>
+            connection === seed &&
+            json.offer_id === "o1" &&
+            json.peer_id === "partial",
+        ),
+      ).to.equal(true);
+
+      // Later paused announces keep the peer.
+      expect(() =>
+        tracker.processMessage({ ...paused, offers: [] }, partial),
+      ).not.to.throw();
+      expect(tracker.swarms.get("swarm1")?.peers).to.have.lengthOf(2);
+    } finally {
+      tracker.dispose();
+    }
+  });
 });

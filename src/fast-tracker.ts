@@ -499,7 +499,10 @@ export class FastTracker<
 
     if (action === "announce") {
       const { event } = json;
-      if (event === undefined) {
+      // "paused" (BEP 21): a partial seed (finished, but not every file) sends it on every
+      // announce (libtorrent, also over WebSocket; Transmission). Like the reference
+      // bittorrent-tracker, it is a periodic announce.
+      if (event === undefined || event === "paused") {
         if (json.answer === undefined) {
           this.processAnnounce(json, connection);
         } else {
